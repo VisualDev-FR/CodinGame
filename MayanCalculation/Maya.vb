@@ -1,26 +1,36 @@
 Module Solution
 
+    public trad() as string
+    public L as integer
+    public H as integer
+    public base as integer
+
     Sub Main ()
         
         Dim inputs as String() = Console.ReadLine().Split(" ")        
-        Dim L as Integer = inputs(0)
-        Dim H as Integer = inputs(1)
-
-        dim trad(0 to 19) as string
+        L = inputs(0)
+        H = inputs(1)
 
         For i as Integer = 0 To H-1
+
             Dim numeral as String = Console.ReadLine()
 
-            for j as integer = 0 to 19
+            if i = 0 then 
+                base = len(numeral)/L
+                redim preserve trad(0 to base-1) 
+            end if
 
-                trad(j) = trad(j) & mid(numeral,j*4+1,4)
+            for j as integer = 0 to base-1
+                trad(j) = trad(j) & mid(numeral,j*L+1,L)
+            next j  
 
-            next j           
         Next
 
         'for k as integer = 0 to ubound(trad)
         '    console.error.writeline(k & " " & trad(k))
-        'next        
+        'next    
+
+        'exit sub    
 
         Dim S1 as Integer = Console.ReadLine()
 
@@ -30,10 +40,10 @@ Module Solution
         For i as Integer = 0 To S1-1
             Dim num1Line as String = Console.ReadLine()
             nbToParse1 = nbToParse1 & num1Line
-            if (i+1) mod 4 = 0 then nbToParse1 = nbToParse1 & " "
+            if (i+1) mod L = 0 then nbToParse1 = nbToParse1 & " "
         Next
 
-        console.error.writeline(tradFromMaya(nbToParse1,trad))        
+        'console.error.writeline("S1 : " & tradFromMaya(nbToParse1))        
 
         Dim S2 as Integer = Console.ReadLine()
 
@@ -43,44 +53,105 @@ Module Solution
             Dim num2Line as String = Console.ReadLine()
             'console.error.writeline(num2Line)
             nbToParse2 = nbToParse2 & num2Line
-            if (i+1) mod 4 = 0 then nbToParse2 = nbToParse2 & " "
+            if (i+1) mod L = 0 then nbToParse2 = nbToParse2 & " "
         Next
 
-        console.error.writeline(tradFromMaya(nbToParse2,trad))
+        'console.error.writeline("S2 : " & tradFromMaya(nbToParse2))
 
-        dim result as integer
+        dim result as long
+        dim operation as string = Console.ReadLine()
 
-        select case Console.ReadLine()
+        select case operation
 
-            case "+" : result = tradFromMaya(nbToParse1,trad) + tradFromMaya(nbToParse2,trad)
-            case "-" : result = tradFromMaya(nbToParse1,trad) - tradFromMaya(nbToParse2,trad)
-            case "*" : result = tradFromMaya(nbToParse1,trad) * tradFromMaya(nbToParse2,trad)
-            case "/" : result = tradFromMaya(nbToParse1,trad) / tradFromMaya(nbToParse2,trad)
+            case "+" : result = tradFromMaya(nbToParse1) + tradFromMaya(nbToParse2)
+            case "-" : result = tradFromMaya(nbToParse1) - tradFromMaya(nbToParse2)
+            case "*" : result = tradFromMaya(nbToParse1) * tradFromMaya(nbToParse2)
+            case "/" : result = tradFromMaya(nbToParse1) / tradFromMaya(nbToParse2)
 
         end select
 
-        Console.WriteLine(tradToMaya(result, trad))
+        console.error.writeline(tradFromMaya(nbToParse1) & operation & tradFromMaya(nbToParse2) & " = " & result)
+        
+        call WriteMaya(ParseValue(result))
+
     End Sub
 
 
-    Private function tradToMaya (val as integer, trad() as string) as string
+    private function WriteMaya (tValues() as integer) as string
 
-    for i = 0 to 14 
-        if val < 19 * 20 ^ i then exit for
-    next 
+        dim mStr as string = ""
+
+        'console.error.writeline(ubound(tValues))
+
+        for i as integer = ubound(tValues) - 1 to 0 step -1
+
+            dim mValue as long = tValues(i)
+            dim mTrad as string = trad(mValue)            
+
+            for j as integer = 0 to len(mTrad) - 1
+
+                mstr = mstr & mid(mTrad,j+1,1)
+
+                if (j+1) mod L = 0 then                 
+                    console.writeline(mstr)
+                    mstr = ""
+                end if
+
+            next j
+
+        next i 
+
+        'console.error.writeline("final : " & vbcrlf & mstr)
+
+        WriteMaya = mStr
 
     end function
 
-    Private function tradFromMaya (val as string, trad() as string) as integer
+    Private function ParseValue (val as long) as integer()
+
+        dim mMod as long, index as integer = 0
+
+        do while mMod <> val
+
+            index = index + 1
+            mMod = val mod (base ^ index)            
+
+        loop 
+
+        dim cMod(0 to index) as long, cFinal(0 to index) as integer
+
+        if index = 0 then redim cFinal(0 to 1)
+
+        for i as integer = index to 0 step -1
+
+            if i = index then
+                cmod(i) = val
+                cFinal(i) = 0
+            else
+                cmod(i) = cmod(i+1) mod (base ^ i) 
+                cFinal(i) = (cmod(i+1)-cmod(i))/(base ^ i)
+            end if
+
+            'console.error.writeline(i & " " & cmod(i) & " " & cFinal(i))
+
+        next
+
+        ParseValue = cFinal
+
+    end function
+
+    Private function tradFromMaya (val as string) as long
 
         dim tVal() as string = split(val," ")
         dim sumT as integer
 
-        for i as integer = ubound(tval)-1 to 0 step -1 
+        'console.error.writeline("L = " & ubound(tval))
 
-            for j as integer = 0 to 19
+        for i as integer = ubound(tval)-1 to 0 step -1
 
-                if tval(i) = trad(j) then sumT = sumT + j * 20 ^ i
+            for j as integer = 0 to base - 1 
+
+                if tval(i) = trad(j) then sumT = sumT + j * (base ^ (ubound(tval)-1 - i))
 
             next j
 
@@ -89,7 +160,5 @@ Module Solution
         tradFromMaya = sumT
     
     end function
-
-
 
 End Module
