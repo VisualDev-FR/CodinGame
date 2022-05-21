@@ -1,4 +1,6 @@
 import java.util.*;
+import java.io.File;
+import java.io.FileNotFoundException;
 
 class Solution {
 
@@ -13,25 +15,22 @@ class Solution {
     public static void main(String args[]) {
 
         InitializeLetters();
-        //ReadInputs();
-        long answer = GetValidator();
 
-        long totalCombinaisons = GetCominaisons(morseSequence);
-
-        System.out.println("Answer : " + answer + " / Found : " + totalCombinaisons);
+        LocalSession();
+        //OnlineSession();
 
     }
 
     static int GetCominaisons(String morseSequence){
 
-        Debug(morseSequence);
-        Debug(" ");
+        //Debug(morseSequence);
+        //Debug(" ");
         
         int totalCombinaisons = 0;
 
         for(String word : morseWords){
 
-            Debug(word);
+            //Debug(word);
 
             if(morseSequence.indexOf(word) > -1){
                 
@@ -118,21 +117,58 @@ class Solution {
 
     //Functions for local tests
 
-    static long GetValidator(){
+    static void OnlineSession(){
 
-        System.out.println("Please choose a Validator to run : ");
+        ReadInputs();
 
+        long totalCombinaisons = GetCominaisons(morseSequence);
+
+        System.out.println(totalCombinaisons);        
+    }
+
+    static void LocalSession(){
+
+        System.out.println("Validator to run ?");
+        
         int number = new Scanner(System.in).nextInt();
+        
+        System.out.println(" ");
+
+        if(number == -1){
+
+            for(int i = 1; i < 6; i++){
+
+                long answer = GetValidator(i);
+        
+                long totalCombinaisons = GetCominaisons(morseSequence);
+
+                System.out.printf("Validator %s : Answer = %d / Found = %d \n\n", i, answer, totalCombinaisons);
+
+            }            
+        }else{
+            long answer = GetValidator(number);
+            
+            long totalCombinaisons = GetCominaisons(morseSequence);
+
+            System.out.printf("Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);            
+        }        
+
+        System.out.println(" ");
+    }
+
+    static long GetValidator(int number){
 
         switch (number){
 
             case 1: return Validator_1();
             case 2: return Validator_2();
             case 3: return Validator_3();
+            case 4: return Validator_4();
             case 5: return Validator_5();
             case 6: return Validator_6();
-            default : return GetValidator();
         }
+
+        return -1;
     }
 
     static void ParseValidator(String[] unicodeWords){
@@ -179,7 +215,25 @@ class Solution {
         return 2;
 
     }
-    
+        
+    static long Validator_4(){
+
+        List<String> fileContent = ReadFile("Draft.txt");
+
+        morseSequence = fileContent.get(0);
+        
+        fileContent.remove(0);
+
+        String[] unicodeWords = fileContent.toArray(new String[0]);
+
+        ParseValidator(unicodeWords);
+
+        System.out.println("Validator 4 Parsed");
+
+        return 2971215073L;
+
+    }
+
     static long Validator_5(){
 
         morseSequence = "-.-..---.-..---.-..--";            
@@ -200,8 +254,29 @@ class Solution {
 
         return 2971215073L;
 
-    }       
+    } 
+    
+    public static List<String> ReadFile(String fullPath) {
+        
+        List<String> lines = new ArrayList<String>();
 
+        try {
+            File myObj = new File(fullPath);
 
+            Scanner myReader = new Scanner(myObj);
+
+            while (myReader.hasNextLine()) lines.add(myReader.nextLine());
+            
+            myReader.close();
+        
+        }catch (FileNotFoundException e) {
+            
+            System.out.println("An error occurred.");
+            e.printStackTrace();
+        
+        }
+
+        return lines;
+    }    
 }
 
