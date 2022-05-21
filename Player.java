@@ -16,21 +16,21 @@ class Solution {
 
         InitializeLetters();
 
-        LocalSession();
+        LocalSession(3);
         //OnlineSession();
 
     }
 
     static int GetCominaisons(String morseSequence){
 
-        //Debug(morseSequence);
-        //Debug(" ");
+        Debug(morseSequence);
+        Debug(" ");
         
         int totalCombinaisons = 0;
 
         for(String word : morseWords){
 
-            //Debug(word);
+            Debug(word);
 
             if(morseSequence.indexOf(word) > -1){
                 
@@ -126,34 +126,45 @@ class Solution {
         System.out.println(totalCombinaisons);        
     }
 
-    static void LocalSession(){
+    static void LocalSession(int number){
 
-        System.out.println("Validator to run ?");
-        
-        int number = new Scanner(System.in).nextInt();
-        
-        System.out.println(" ");
+        if(number == 0){
 
-        if(number == -1){
+            System.out.println("Validator to run ?");
 
-            for(int i = 1; i < 6; i++){
+            number = new Scanner(System.in).nextInt();
 
-                long answer = GetValidator(i);
-        
+            if(number > 6 || number < 0) return;
+
+            if(number > 6){
+
+                for(int i = 1; i < 6; i++){
+
+                    long answer = GetValidator(i);
+            
+                    long totalCombinaisons = GetCominaisons(morseSequence);
+
+                    System.out.printf("Validator %s : Answer = %d / Found = %d \n\n", i, answer, totalCombinaisons);
+
+                }            
+            }else{
+                long answer = GetValidator(number);
+                
                 long totalCombinaisons = GetCominaisons(morseSequence);
 
-                System.out.printf("Validator %s : Answer = %d / Found = %d \n\n", i, answer, totalCombinaisons);
+                System.out.printf("Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);            
+            }        
 
-            }            
+            System.out.println(" ");
+            LocalSession(0);
+        
         }else{
             long answer = GetValidator(number);
-            
+                
             long totalCombinaisons = GetCominaisons(morseSequence);
 
-            System.out.printf("Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);            
-        }        
-
-        System.out.println(" ");
+            System.out.printf("Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);
+        }
     }
 
     static long GetValidator(int number){
@@ -277,6 +288,6 @@ class Solution {
         }
 
         return lines;
-    }    
+    }  
 }
 
