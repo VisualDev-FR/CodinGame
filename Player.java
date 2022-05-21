@@ -4,8 +4,7 @@ class Solution {
 
     static TreeMap<Character, String> traductions;
 
-    static String morseSequence;
-    
+    static String morseSequence;    
     static int dictionaryCount;
 
     static String[] morseWords;
@@ -16,7 +15,31 @@ class Solution {
         InitializeLetters();
         ReadInputs();
 
-        System.out.println("answer");
+        int totalCombinaisons = GetCominaisons(morseSequence);
+
+        System.out.println(totalCombinaisons);
+    }
+
+    static int GetCominaisons(String morseSequence){
+        
+        int totalCombinaisons = 0;
+
+        for(String word : morseWords){
+
+            if(morseSequence.indexOf(word)>-1){
+                
+                if(morseSequence.length() - word.length() == 0){
+                    
+                    totalCombinaisons++;
+                
+                }else{
+                    String cuttedSequence = morseSequence.replaceFirst(word, "");
+                    
+                    totalCombinaisons += GetCominaisons(cuttedSequence);
+                }
+            }
+        }
+        return totalCombinaisons;
     }
 
     static String TraduceToMorse(String word){
@@ -80,6 +103,10 @@ class Solution {
         traductions.put('Y', "-.--" );
         traductions.put('Z', "--.." );
 
-    }    
+    }
+
+    static void Debug(String message){
+        System.err.println(message);
+    }
 }
 
