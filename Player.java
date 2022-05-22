@@ -5,8 +5,9 @@ import java.io.FileNotFoundException;
 class Solution {
 
     static TreeMap<Character, String> traductions;
+    static TreeMap<String, Sequence> sequences;
 
-    static String morseSequence;    
+    static String morseInput;    
     static int dictionaryCount;
 
     static String[] morseWords;
@@ -16,21 +17,21 @@ class Solution {
 
         InitializeLetters();
 
-        LocalSession(3);
+        LocalSession(0);
         //OnlineSession();
 
     }
 
     static int GetCominaisons(String morseSequence){
 
-        Debug(morseSequence);
-        Debug(" ");
+        //Debug("morseSequence : " + morseSequence);
+        //Debug(" ");
         
         int totalCombinaisons = 0;
 
-        for(String word : morseWords){
+        for(Sequence sequence : sequences.values()){
 
-            Debug(word);
+            String word = sequence.morseSequence; 
 
             if(morseSequence.indexOf(word) > -1){
                 
@@ -41,7 +42,7 @@ class Solution {
                 }else{
                     String cuttedSequence = morseSequence.replaceFirst(word, "");
                     
-                    totalCombinaisons += GetCominaisons(cuttedSequence);
+                    //totalCombinaisons += GetCominaisons(cuttedSequence);
                 }
             }
         }
@@ -66,15 +67,20 @@ class Solution {
 
         Scanner in = new Scanner(System.in);
 
-        morseSequence = in.next();        
+        morseInput = in.next();        
         dictionaryCount = in.nextInt();
 
-        morseWords = new String[dictionaryCount];
-        lengthTable = new int[dictionaryCount];
-        
+        sequences = new TreeMap<String, Sequence>();
+
         for (int i = 0; i < dictionaryCount; i++) {
-            morseWords[i] = TraduceToMorse(in.next());
-            lengthTable[i] = morseWords[i].length();
+
+            Sequence mSequence = new Sequence(in.next());
+
+            if (mSequence.occurences > 0){
+
+                PrintSequence(mSequence);
+                sequences.put(mSequence.asciiSequence, mSequence);
+            }            
         }
     }
 
@@ -114,6 +120,48 @@ class Solution {
     static void Debug(String message){
         System.err.println(message);
     }
+    
+    //Class
+
+    public static class Sequence{
+
+        public List<Integer> indexes;
+        public int occurences;
+        public String asciiSequence;
+        public String morseSequence;
+        public int length;
+        
+        public Sequence(String word){
+
+            asciiSequence = word;
+            morseSequence = TraduceToMorse(asciiSequence);
+            length = morseSequence.length();
+
+            indexes = new ArrayList<Integer>();
+
+            int lastIndex = morseInput.indexOf(morseSequence, 0);
+
+            while (lastIndex != -1) {
+                
+                occurences++;
+                indexes.add(lastIndex);
+                lastIndex += morseSequence.length();
+                lastIndex = morseInput.indexOf(morseSequence, lastIndex);
+
+            }
+        }
+    }
+
+    static void PrintSequence(Sequence mSequence){
+        
+        System.err.printf("%s : occurences = %s, indexes : ", mSequence.morseSequence, mSequence.occurences);
+
+        for(Integer index : mSequence.indexes){
+            System.err.print("" + index + " ");
+        }
+
+        System.err.print("\n");        
+    }
 
     //Functions for local tests
 
@@ -121,7 +169,7 @@ class Solution {
 
         ReadInputs();
 
-        long totalCombinaisons = GetCominaisons(morseSequence);
+        long totalCombinaisons = GetCominaisons(morseInput);
 
         System.out.println(totalCombinaisons);        
     }
@@ -130,29 +178,33 @@ class Solution {
 
         if(number == 0){
 
-            System.out.println("Validator to run ?");
+            System.out.print("Validator to run ?  ");
 
             number = new Scanner(System.in).nextInt();
 
+            System.out.print("\n");
+
             if(number > 6 || number < 0) return;
 
-            if(number > 6){
+            if(number == 0){
 
                 for(int i = 1; i < 6; i++){
 
                     long answer = GetValidator(i);
             
-                    long totalCombinaisons = GetCominaisons(morseSequence);
+                    long totalCombinaisons = GetCominaisons(morseInput);
+                    
+                    System.out.println(" ");
+                    System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", i, answer, totalCombinaisons);
 
-                    System.out.printf("Validator %s : Answer = %d / Found = %d \n\n", i, answer, totalCombinaisons);
+                }
 
-                }            
             }else{
                 long answer = GetValidator(number);
                 
-                long totalCombinaisons = GetCominaisons(morseSequence);
-
-                System.out.printf("Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);            
+                long totalCombinaisons = GetCominaisons(morseInput);
+                System.out.println(" ");
+                System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);            
             }        
 
             System.out.println(" ");
@@ -161,9 +213,10 @@ class Solution {
         }else{
             long answer = GetValidator(number);
                 
-            long totalCombinaisons = GetCominaisons(morseSequence);
-
-            System.out.printf("Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);
+            long totalCombinaisons = GetCominaisons(morseInput);
+            
+            System.out.println(" ");
+            System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);
         }
     }
 
@@ -184,19 +237,23 @@ class Solution {
 
     static void ParseValidator(String[] unicodeWords){
 
-        morseWords = new String[unicodeWords.length];
-        lengthTable = new int[unicodeWords.length];
-        
-        for (int i = 0; i < morseWords.length; i++) {
-            morseWords[i] = TraduceToMorse(unicodeWords[i]);
-            lengthTable[i] = morseWords[i].length();
-        }        
+        sequences = new TreeMap<String, Sequence>();
 
+        for (int i = 0; i < unicodeWords.length; i++) {
+            
+            Sequence mSequence = new Sequence(unicodeWords[i]);
+
+            if (mSequence.occurences > 0){
+
+                PrintSequence(mSequence);
+                sequences.put(mSequence.asciiSequence, mSequence);
+            }
+        }
     }
 
     static long Validator_1(){
 
-        morseSequence = "-.-";            
+        morseInput = "-.-";            
         String[] unicodeWords = "A B C HELLO K WORLD".split(" ");
 
         ParseValidator(unicodeWords);
@@ -207,7 +264,7 @@ class Solution {
 
     static long Validator_2(){
 
-        morseSequence = "--.-------..";            
+        morseInput = "--.-------..";            
         String[] unicodeWords = "GOD GOOD MORNING G HELLO".split(" ");
 
         ParseValidator(unicodeWords);
@@ -218,7 +275,7 @@ class Solution {
 
     static long Validator_3(){
 
-        morseSequence = "......-...-..---.-----.-..-..-..";            
+        morseInput = "......-...-..---.-----.-..-..-..";            
         String[] unicodeWords = "HELL HELLO OWORLD WORLD TEST".split(" ");
 
         ParseValidator(unicodeWords);
@@ -231,7 +288,7 @@ class Solution {
 
         List<String> fileContent = ReadFile("Draft.txt");
 
-        morseSequence = fileContent.get(0);
+        morseInput = fileContent.get(0);
         
         fileContent.remove(0);
 
@@ -239,15 +296,13 @@ class Solution {
 
         ParseValidator(unicodeWords);
 
-        System.out.println("Validator 4 Parsed");
-
         return 2971215073L;
 
     }
 
     static long Validator_5(){
 
-        morseSequence = "-.-..---.-..---.-..--";            
+        morseInput = "-.-..---.-..---.-..--";            
         String[] unicodeWords = "CAT KIM TEXT TREM CEM".split(" ");
 
         ParseValidator(unicodeWords);
@@ -258,7 +313,7 @@ class Solution {
 
     static long Validator_6(){
 
-        morseSequence = "..............................................";            
+        morseInput = "..............................................";            
         String[] unicodeWords = "E I".split(" ");
 
         ParseValidator(unicodeWords);
