@@ -17,7 +17,7 @@ class Solution {
 
         InitializeLetters();
 
-        //LocalSession(0);
+        LocalSession(0);
         OnlineSession();
 
     }
