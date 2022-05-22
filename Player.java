@@ -15,6 +15,8 @@ class Solution {
 
     static TreeMap<Integer, List<Integer>> indexMap;
 
+    static long totalKeys = 0;
+
     static String[] morseWords;
     static int[] lengthTable;   
     static long totalCombinaisons;
@@ -30,9 +32,13 @@ class Solution {
 
     static void ExploreIndexMap(int begIndex){
 
+        if(begIndex == 0) Debug("Total Keys = " + totalKeys);
+
+        if(!indexMap.containsKey(begIndex)) return;
+
         for(int endIndex : indexMap.get(begIndex)){
 
-            if(endIndex >= morseInput.length()){
+            if(endIndex == morseInput.length()){
             
                 totalCombinaisons++;
             
@@ -135,16 +141,22 @@ class Solution {
 
             indexes = new ArrayList<Integer>();
 
-            int lastIndex = morseInput.indexOf(morseSequence, 0);
+            if(morseInput.indexOf(morseSequence, 0) >= 0){
 
-            while (lastIndex != -1) {
-                
-                occurences++;
-                indexes.add(lastIndex);
-                lastIndex += morseSequence.length();
-                lastIndex = morseInput.indexOf(morseSequence, lastIndex);
+                for(int i = 0; i < morseInput.length();  i++){
 
+                    int lastIndex = morseInput.indexOf(morseSequence, i);
+    
+                    if(lastIndex > -1 && !indexes.contains(lastIndex)){
+                        occurences++;
+                        indexes.add(lastIndex);
+                    }
+                }
             }
+
+
+
+            totalKeys += occurences;
 
             for(int i = 0; i < indexes.size(); i++){
 
@@ -153,7 +165,7 @@ class Solution {
 
                 if(!indexMap.containsKey(begIndex)) indexMap.put(begIndex, new ArrayList<Integer>());
 
-                //Debug(begIndex + " " + endIndex + " " + morseSequence);
+                //Debug(begIndex + " " + endIndex + " ");
 
                 indexMap.get(begIndex).add(endIndex);                
             }            
@@ -289,16 +301,18 @@ class Solution {
                     ExploreIndexMap(0);
                     
                     System.out.println(" ");
-                    System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", i, answer, totalCombinaisons);
+                    System.out.printf(" Validator %s : Answer = %s / Found = %s \n\n", number, answer, totalCombinaisons);
 
                 }
 
             }else{
+
                 long answer = GetValidator(number);
                 
                 ExploreIndexMap(0);
+
                 System.out.println(" ");
-                System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);            
+                System.out.printf(" Validator %s : Answer = %s / Found = %s \n\n", number, answer, totalCombinaisons);           
             }        
 
             System.out.println(" ");
@@ -308,9 +322,9 @@ class Solution {
             long answer = GetValidator(number);
                 
             ExploreIndexMap(0);
-            
+
             System.out.println(" ");
-            System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);
+            System.out.printf(" Validator %s : Answer = %s / Found = %s \n\n", number, answer, totalCombinaisons);
         }
     }
 
@@ -332,6 +346,7 @@ class Solution {
     static void ParseValidator(String[] unicodeWords){
 
         totalCombinaisons = 0;
+        totalKeys = 0;
 
         indexMap = new TreeMap<Integer, List<Integer>>();
         sequences = new TreeMap<String, Sequence>();
@@ -393,7 +408,7 @@ class Solution {
 
         ParseValidator(unicodeWords);
 
-        return 2971215073L;
+        return 57330892800L; //57 330 892 800
 
     }
 
@@ -415,7 +430,7 @@ class Solution {
 
         ParseValidator(unicodeWords);
 
-        return 2971215073L;
+        return 2971215073L; //2 971 215 073
 
     } 
     
