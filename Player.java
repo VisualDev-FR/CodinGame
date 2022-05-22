@@ -78,7 +78,7 @@ class Solution {
 
             if (mSequence.occurences > 0){
 
-                PrintSequence(mSequence);
+                mSequence.Print();
                 sequences.put(mSequence.asciiSequence, mSequence);
             }            
         }
@@ -150,17 +150,54 @@ class Solution {
 
             }
         }
+
+        public void Print(){
+            System.err.printf("%s : occurences = %s, indexes : ", this.morseSequence, this.occurences);
+
+            for(Integer index : this.indexes){
+                System.err.print("" + index + " ");
+            }
+    
+            System.err.print("\n");             
+        }
     }
 
-    static void PrintSequence(Sequence mSequence){
-        
-        System.err.printf("%s : occurences = %s, indexes : ", mSequence.morseSequence, mSequence.occurences);
+    public static class Combinaison{
 
-        for(Integer index : mSequence.indexes){
-            System.err.print("" + index + " ");
+        public List<Sequence> sequenceList;
+        public boolean IsValid;
+        public int length;
+        public String strCombinaison;
+
+        public Combinaison(){
+
+            strCombinaison = "0".repeat(morseInput.length());
+
+            sequenceList = new ArrayList<Sequence>();
+            IsValid = true;
         }
 
-        System.err.print("\n");        
+        public boolean TryInsertAll(Sequence mSequence){
+
+            String beforeInsert = strCombinaison;
+
+            for(int index : mSequence.indexes){
+                
+                int begIndex = index;
+                int endIndex = index + mSequence.length;
+
+                String subSequence = strCombinaison.substring(begIndex, endIndex);
+                StringBuffer strBufCombinaison = new StringBuffer(strCombinaison);
+
+                if(subSequence == "0".repeat(subSequence.length())){
+                    strCombinaison = strBufCombinaison.replace(begIndex, endIndex, mSequence.morseSequence).toString();
+                }
+
+            }
+
+            return beforeInsert != strCombinaison ? true : false;
+        }
+
     }
 
     //Functions for local tests
@@ -245,7 +282,7 @@ class Solution {
 
             if (mSequence.occurences > 0){
 
-                PrintSequence(mSequence);
+                mSequence.Print();
                 sequences.put(mSequence.asciiSequence, mSequence);
             }
         }
