@@ -13,30 +13,34 @@ class Solution {
     static String morseInput;    
     static int dictionaryCount;
 
-    static List<Boolean[]> byteList;
+    static TreeMap<Integer, List<Integer>> indexMap;
 
     static String[] morseWords;
     static int[] lengthTable;   
+    static long totalCombinaisons;
 
     public static void main(String args[]) {
 
         InitializeLetters();
 
-        LocalSession(0);
-        //OnlineSession();
+        //LocalSession(0);
+        OnlineSession();
 
     }
 
-    static int GetCombinaisons(String morseSequence){
+    static void ExploreIndexMap(int begIndex){
 
-        int totalCombinaisons = 0;
+        for(int endIndex : indexMap.get(begIndex)){
 
-        Combinaison combinaison = new Combinaison(morseSequence);
-        
+            if(endIndex >= morseInput.length()){
+            
+                totalCombinaisons++;
+            
+            }else if(indexMap.containsKey(endIndex)){
 
-        
-
-        return totalCombinaisons;
+                ExploreIndexMap(endIndex);
+            }
+        }        
     }
 
     static String TraduceToMorse(String word){
@@ -60,6 +64,9 @@ class Solution {
         morseInput = in.next();        
         dictionaryCount = in.nextInt();
 
+        totalCombinaisons = 0;
+
+        indexMap = new TreeMap<Integer, List<Integer>>();
         sequences = new TreeMap<String, Sequence>();
 
         for (int i = 0; i < dictionaryCount; i++) {
@@ -68,7 +75,6 @@ class Solution {
 
             if (mSequence.occurences > 0){
 
-                mSequence.Print();
                 sequences.put(mSequence.asciiSequence, mSequence);
             }            
         }
@@ -144,18 +150,13 @@ class Solution {
 
                 int begIndex = indexes.get(i);
                 int endIndex = begIndex + length;
-                
-                Boolean[] byteTable = new Boolean[morseInput.length()];
 
-                for(int j = begIndex; j < endIndex; j++) byteTable[j] = true;
+                if(!indexMap.containsKey(begIndex)) indexMap.put(begIndex, new ArrayList<Integer>());
 
-                byteList.add(byteTable);
+                //Debug(begIndex + " " + endIndex + " " + morseSequence);
 
-                System.err.println(Arrays.toString(byteTable));
-
-            }
-
-            
+                indexMap.get(begIndex).add(endIndex);                
+            }            
         }
 
         public void Print(){
@@ -262,7 +263,7 @@ class Solution {
 
         ReadInputs();
 
-        long totalCombinaisons = GetCombinaisons(morseInput);
+        ExploreIndexMap(0);
 
         System.out.println(totalCombinaisons);        
     }
@@ -285,7 +286,7 @@ class Solution {
 
                     long answer = GetValidator(i);
             
-                    long totalCombinaisons = GetCombinaisons("0".repeat(morseInput.length()));
+                    ExploreIndexMap(0);
                     
                     System.out.println(" ");
                     System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", i, answer, totalCombinaisons);
@@ -295,7 +296,7 @@ class Solution {
             }else{
                 long answer = GetValidator(number);
                 
-                long totalCombinaisons = GetCombinaisons("0".repeat(morseInput.length()));
+                ExploreIndexMap(0);
                 System.out.println(" ");
                 System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);            
             }        
@@ -306,7 +307,7 @@ class Solution {
         }else{
             long answer = GetValidator(number);
                 
-            long totalCombinaisons = GetCombinaisons("0".repeat(morseInput.length()));
+            ExploreIndexMap(0);
             
             System.out.println(" ");
             System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);
@@ -330,7 +331,9 @@ class Solution {
 
     static void ParseValidator(String[] unicodeWords){
 
-        byteList = new ArrayList<Boolean[]>();
+        totalCombinaisons = 0;
+
+        indexMap = new TreeMap<Integer, List<Integer>>();
         sequences = new TreeMap<String, Sequence>();
 
         for (int i = 0; i < unicodeWords.length; i++) {
