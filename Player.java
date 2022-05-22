@@ -18,33 +18,31 @@ class Solution {
         InitializeLetters();
 
         LocalSession(0);
-        OnlineSession();
+        //OnlineSession();
 
     }
 
     static int GetCominaisons(String morseSequence){
 
-        //Debug("morseSequence : " + morseSequence);
-        //Debug(" ");
-        
         int totalCombinaisons = 0;
+
+        Debug(morseSequence);
 
         for(Sequence sequence : sequences.values()){
 
-            String word = sequence.morseSequence; 
+            Combinaison combinaison = new Combinaison(morseSequence);
 
-            if(morseSequence.indexOf(word) > -1){
-                
-                if(morseSequence.length() - word.length() == 0){
+            int listindex = 0;
 
-                    totalCombinaisons++;
-                
-                }else{
-                    String cuttedSequence = morseSequence.replaceFirst(word, "");
-                    
-                    //totalCombinaisons += GetCominaisons(cuttedSequence);
-                }
-            }
+            while(combinaison.missingChars > 0 && combinaison.CanInsert(sequence, listindex)){
+
+                combinaison.TryInsert(sequence, listindex);
+
+                totalCombinaisons += GetCominaisons(combinaison.strCombinaison);
+
+                listindex++;
+             
+            }            
         }
         return totalCombinaisons;
     }
@@ -168,13 +166,15 @@ class Solution {
         public boolean IsValid;
         public int length;
         public String strCombinaison;
+        public int missingChars;
 
-        public Combinaison(){
+        public Combinaison(String mStrCombinaison){
 
-            strCombinaison = "0".repeat(morseInput.length());
+            strCombinaison = mStrCombinaison;
+            missingChars = CountMissing();
 
             sequenceList = new ArrayList<Sequence>();
-            IsValid = true;
+            IsValid = true;            
         }
 
         public boolean TryInsertAll(Sequence mSequence){
@@ -189,12 +189,60 @@ class Solution {
                 String subSequence = strCombinaison.substring(begIndex, endIndex);
                 StringBuffer strBufCombinaison = new StringBuffer(strCombinaison);
 
-                if(subSequence == "0".repeat(subSequence.length())){
+                if(subSequence.equals("0".repeat(subSequence.length()))){
+                    
                     strCombinaison = strBufCombinaison.replace(begIndex, endIndex, mSequence.morseSequence).toString();
                 }
 
             }
+            
+            missingChars = strCombinaison.length() - strCombinaison.replace("0", "").length();
+
             return beforeInsert != strCombinaison ? true : false;
+        }
+
+        public boolean TryInsert(Sequence mSequence, int Listindex){
+            
+            String beforeInsert = strCombinaison;
+
+            int index = mSequence.indexes.get(Listindex);
+
+            int begIndex = index;
+            int endIndex = index + mSequence.length;
+
+            String subSequence = strCombinaison.substring(begIndex, endIndex);
+            StringBuffer strBufCombinaison = new StringBuffer(strCombinaison);
+
+            if(subSequence.equals("0".repeat(subSequence.length()))){
+                
+                strCombinaison = strBufCombinaison.replace(begIndex, endIndex, mSequence.morseSequence).toString();
+            }
+
+            missingChars = CountMissing();
+
+            return beforeInsert != strCombinaison ? true : false;
+        }
+
+        public boolean CanInsert(Sequence sequence, int listIndex){
+            
+            if(listIndex >= sequence.indexes.size()) return false;
+
+            int index = sequence.indexes.get(listIndex);
+
+            int begIndex = index;
+            int endIndex = index + sequence.length;
+
+            String subSequence = strCombinaison.substring(begIndex, endIndex);
+
+            return subSequence.equals("0".repeat(subSequence.length()));
+        }
+
+        public int CountMissing(){
+            return strCombinaison.length() - strCombinaison.replace("0", "").length();
+        }
+
+        public void Print(){
+            System.err.println(strCombinaison);
         }
 
     }
@@ -228,7 +276,7 @@ class Solution {
 
                     long answer = GetValidator(i);
             
-                    long totalCombinaisons = GetCominaisons(morseInput);
+                    long totalCombinaisons = GetCominaisons("0".repeat(morseInput.length()));
                     
                     System.out.println(" ");
                     System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", i, answer, totalCombinaisons);
@@ -238,7 +286,7 @@ class Solution {
             }else{
                 long answer = GetValidator(number);
                 
-                long totalCombinaisons = GetCominaisons(morseInput);
+                long totalCombinaisons = GetCominaisons("0".repeat(morseInput.length()));
                 System.out.println(" ");
                 System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);            
             }        
@@ -249,7 +297,7 @@ class Solution {
         }else{
             long answer = GetValidator(number);
                 
-            long totalCombinaisons = GetCominaisons(morseInput);
+            long totalCombinaisons = GetCominaisons("0".repeat(morseInput.length()));
             
             System.out.println(" ");
             System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);
@@ -281,7 +329,6 @@ class Solution {
 
             if (mSequence.occurences > 0){
 
-                mSequence.Print();
                 sequences.put(mSequence.asciiSequence, mSequence);
             }
         }
