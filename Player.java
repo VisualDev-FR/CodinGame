@@ -1,4 +1,7 @@
 import java.util.*;
+
+import javax.sql.rowset.Joinable;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 
@@ -9,6 +12,8 @@ class Solution {
 
     static String morseInput;    
     static int dictionaryCount;
+
+    static List<Boolean[]> byteList;
 
     static String[] morseWords;
     static int[] lengthTable;   
@@ -22,28 +27,15 @@ class Solution {
 
     }
 
-    static int GetCominaisons(String morseSequence){
+    static int GetCombinaisons(String morseSequence){
 
         int totalCombinaisons = 0;
 
-        Debug(morseSequence);
+        Combinaison combinaison = new Combinaison(morseSequence);
+        
 
-        for(Sequence sequence : sequences.values()){
+        
 
-            Combinaison combinaison = new Combinaison(morseSequence);
-
-            int listindex = 0;
-
-            while(combinaison.missingChars > 0 && combinaison.CanInsert(sequence, listindex)){
-
-                combinaison.TryInsert(sequence, listindex);
-
-                totalCombinaisons += GetCominaisons(combinaison.strCombinaison);
-
-                listindex++;
-             
-            }            
-        }
         return totalCombinaisons;
     }
 
@@ -147,6 +139,23 @@ class Solution {
                 lastIndex = morseInput.indexOf(morseSequence, lastIndex);
 
             }
+
+            for(int i = 0; i < indexes.size(); i++){
+
+                int begIndex = indexes.get(i);
+                int endIndex = begIndex + length;
+                
+                Boolean[] byteTable = new Boolean[morseInput.length()];
+
+                for(int j = begIndex; j < endIndex; j++) byteTable[j] = true;
+
+                byteList.add(byteTable);
+
+                System.err.println(Arrays.toString(byteTable));
+
+            }
+
+            
         }
 
         public void Print(){
@@ -247,13 +256,13 @@ class Solution {
 
     }
 
-    //Functions for local tests
+    //Functions for switching local to online running
 
     static void OnlineSession(){
 
         ReadInputs();
 
-        long totalCombinaisons = GetCominaisons(morseInput);
+        long totalCombinaisons = GetCombinaisons(morseInput);
 
         System.out.println(totalCombinaisons);        
     }
@@ -276,7 +285,7 @@ class Solution {
 
                     long answer = GetValidator(i);
             
-                    long totalCombinaisons = GetCominaisons("0".repeat(morseInput.length()));
+                    long totalCombinaisons = GetCombinaisons("0".repeat(morseInput.length()));
                     
                     System.out.println(" ");
                     System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", i, answer, totalCombinaisons);
@@ -286,7 +295,7 @@ class Solution {
             }else{
                 long answer = GetValidator(number);
                 
-                long totalCombinaisons = GetCominaisons("0".repeat(morseInput.length()));
+                long totalCombinaisons = GetCombinaisons("0".repeat(morseInput.length()));
                 System.out.println(" ");
                 System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);            
             }        
@@ -297,7 +306,7 @@ class Solution {
         }else{
             long answer = GetValidator(number);
                 
-            long totalCombinaisons = GetCominaisons("0".repeat(morseInput.length()));
+            long totalCombinaisons = GetCombinaisons("0".repeat(morseInput.length()));
             
             System.out.println(" ");
             System.out.printf(" Validator %s : Answer = %d / Found = %d \n\n", number, answer, totalCombinaisons);
@@ -321,6 +330,7 @@ class Solution {
 
     static void ParseValidator(String[] unicodeWords){
 
+        byteList = new ArrayList<Boolean[]>();
         sequences = new TreeMap<String, Sequence>();
 
         for (int i = 0; i < unicodeWords.length; i++) {
@@ -329,6 +339,7 @@ class Solution {
 
             if (mSequence.occurences > 0){
 
+                //mSequence.Print();
                 sequences.put(mSequence.asciiSequence, mSequence);
             }
         }
