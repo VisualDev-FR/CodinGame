@@ -194,7 +194,6 @@ class Solution {
                 }
 
             }
-
             return beforeInsert != strCombinaison ? true : false;
         }
 
