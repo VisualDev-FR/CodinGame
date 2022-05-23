@@ -7,14 +7,12 @@ class Solution {
     static TreeMap<Character, String> traductions;
     static TreeMap<String, Sequence> sequences;
     static TreeMap<String, Sequence> encounteredSequences;
-
-    static TreeMap<Integer, List<Integer>> beginMap;
-    static TreeMap<Integer, List<Integer>> endMap;
+    static TreeMap<Integer, Node> nodes;
 
     static String morseInput;    
     static int dictionaryCount;
 
-    static long totalKeys = 0;
+    static long branchesCount = 0;
 
     static String[] morseWords;
     static int[] lengthTable;   
@@ -31,24 +29,14 @@ class Solution {
 
     static void ExploreIndexMap(int begIndex){
 
-        if(begIndex == 0) {
+/*         if(begIndex == 0) {
             Debug("Total Keys = " + totalKeys);
             Debug("Total morse = " + encounteredSequences.size());
-        }
+        } */
+        
+        System.err.printf("nbNodes : %s\n", nodes.size());
+        System.err.printf("Branches : %s\n", branchesCount);
 
-        if(!beginMap.containsKey(begIndex)) return;
-
-        for(int endIndex : beginMap.get(begIndex)){
-
-            if(endIndex == morseInput.length()){
-            
-                totalCombinaisons++;
-            
-            }else if(beginMap.containsKey(endIndex)){
-
-                ExploreIndexMap(endIndex);
-            }
-        }        
     }
 
     static String TraduceToMorse(String word){
@@ -74,7 +62,6 @@ class Solution {
 
         totalCombinaisons = 0;
 
-        beginMap = new TreeMap<Integer, List<Integer>>();
         sequences = new TreeMap<String, Sequence>();
 
         for (int i = 0; i < dictionaryCount; i++) {
@@ -129,8 +116,8 @@ class Solution {
 
     public static class Sequence{
 
-        public List<Integer> begIndexes;
-        public List<Integer> endIndexes;
+        public List<int[]> branches;
+        public List<Integer> indexes;
 
         public int occurences;
         public String asciiSequence;
@@ -140,78 +127,106 @@ class Solution {
         public Sequence(String word){
 
             morseSequence = TraduceToMorse(word);
+            asciiSequence = word;
+            length = morseSequence.length();
 
             if(encounteredSequences.containsKey(morseSequence)){
 
-                this.Set(encounteredSequences.get(morseSequence));
+                this.Duplicate(encounteredSequences.get(morseSequence));
 
-                for(int begIndex : this.begIndexes){
-                    int endIndex = begIndex + this.length;
-                    AddIndexes(begIndex, endIndex);
-                }
-
-            }else if(morseInput.indexOf(morseSequence, 0) >= 0){
-
-                asciiSequence = word;
-
-                length = morseSequence.length();
-
-                begIndexes = new ArrayList<Integer>();
-                endIndexes = new ArrayList<Integer>();
+            }else{
 
                 encounteredSequences.put(morseSequence, this);
 
-                for(int i = 0; i < morseInput.length();  i++){
+                branches = new ArrayList<int[]>();
+                indexes = new ArrayList<Integer>();
+                
+                int i = 0;
+                int begIndex = morseInput.indexOf(morseSequence, i);
 
-                    int begIndex = morseInput.indexOf(morseSequence, i);
-                    int endIndex = begIndex + length;
+                while(begIndex > -1){
+
+                    if(begIndex > -1 && !indexes.contains(begIndex)){
+
+                        indexes.add(begIndex);
     
-                    if(begIndex > -1 && !begIndexes.contains(begIndex)){
-                        occurences++;
+                        int endIndex = begIndex + length;
+    
+                        Node beginNode = nodes.containsKey(begIndex) ? nodes.get(begIndex) : new Node(begIndex);
+                        Node endNode = nodes.containsKey(endIndex) ? nodes.get(endIndex) : new Node(endIndex);
+                        
+                        beginNode.Connect(endNode);                    
+                        branches.add(new int[]{begIndex, endIndex});
+                        branchesCount++;
+                    }
 
-                        begIndexes.add(begIndex);
-                        endIndexes.add(endIndex);
+                    i++;
+                    begIndex = morseInput.indexOf(morseSequence, i);
 
-                        AddIndexes(begIndex, endIndex);                        
-
-                    }  
                 }
             }
 
-            //System.out.printf("%s : %s\n", occurences, morseSequence);
-            totalKeys += occurences;
+
         }
 
-        public void AddIndexes(int begIndex, int endIndex){
-            
-            if(!beginMap.containsKey(begIndex)) beginMap.put(begIndex, new ArrayList<Integer>());
-            if(!endMap.containsKey(endIndex)) endMap.put(endIndex, new ArrayList<Integer>());
-            
-            endMap.get(endIndex).add(begIndex);
-            beginMap.get(begIndex).add(endIndex);            
-        }
+        public void Duplicate(Sequence mSequence){
 
-        public void Set(Sequence mSequence){
+            for(int[] branch : mSequence.branches){
 
-            begIndexes = mSequence.begIndexes;
-            endIndexes = mSequence.endIndexes;
-    
-            occurences = mSequence.occurences;
-            asciiSequence = mSequence.asciiSequence;
-            length = mSequence.length;            
-        }
+                branchesCount++;
+                
+                Node begNode = nodes.get(branch[0]);
+                Node endNode = nodes.get(branch[1]);
 
-        public void Print(){
-            System.err.printf("%s : occurences = %s, indexes : ", this.morseSequence, this.occurences);
+                begNode.Connect(endNode);
 
-            for(Integer index : this.begIndexes){
-                System.err.print("" + index + " ");
             }
-    
-            System.err.print("\n");             
         }
     }
 
+    public static class Node{
+
+        public boolean begConnected;
+        public boolean endConnected;
+        
+        public List<Node> nodesFrom;
+        public List<Node> nodesTo;
+        
+        public int ID;
+        public int connections;
+
+        public Node(int nodeID){
+
+            ID = nodeID;
+
+            nodesFrom = new ArrayList<Node>();
+            nodesTo = new ArrayList<Node>();
+
+            begConnected = nodeID == 0;
+            endConnected = nodeID == morseInput.length();
+
+            if(!nodes.containsKey(ID)) nodes.put(ID, this);
+        }
+
+        public void Connect(Node mNode){
+
+            Node minNode = mNode.ID < this.ID ? mNode : this;
+            Node maxNode = mNode.ID < this.ID ? this : mNode;
+
+            maxNode.nodesFrom.add(minNode);
+            minNode.nodesTo.add(maxNode);
+
+            maxNode.begConnected = maxNode.begConnected || minNode.begConnected;
+            maxNode.endConnected = maxNode.endConnected || minNode.endConnected;
+            
+            minNode.begConnected = minNode.begConnected || maxNode.begConnected;
+            minNode.endConnected = minNode.endConnected || maxNode.endConnected;          
+        }
+
+        public boolean IsValid(){
+            return begConnected && endConnected;
+        }
+    }
     //Functions for switching local to online running
 
     static void OnlineSession(){
@@ -289,12 +304,11 @@ class Solution {
     static void ParseValidator(String[] unicodeWords){
 
         totalCombinaisons = 0;
-        totalKeys = 0;
+        branchesCount = 0;
 
         encounteredSequences = new TreeMap<String, Sequence>();
-        beginMap = new TreeMap<Integer, List<Integer>>();
-        endMap = new TreeMap<Integer, List<Integer>>();
         sequences = new TreeMap<String, Sequence>();
+        nodes = new TreeMap<Integer, Node>();
 
         for (int i = 0; i < unicodeWords.length; i++) {
             
