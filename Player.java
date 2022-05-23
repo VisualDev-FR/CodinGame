@@ -1,7 +1,4 @@
 import java.util.*;
-
-import javax.sql.rowset.Joinable;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 
@@ -9,11 +6,13 @@ class Solution {
 
     static TreeMap<Character, String> traductions;
     static TreeMap<String, Sequence> sequences;
+    static TreeMap<String, Sequence> encounteredSequences;
+
+    static TreeMap<Integer, List<Integer>> beginMap;
+    static TreeMap<Integer, List<Integer>> endMap;
 
     static String morseInput;    
     static int dictionaryCount;
-
-    static TreeMap<Integer, List<Integer>> indexMap;
 
     static long totalKeys = 0;
 
@@ -25,24 +24,27 @@ class Solution {
 
         InitializeLetters();
 
-        //LocalSession(0);
-        OnlineSession();
+        LocalSession(0);
+        //OnlineSession();
 
     }
 
     static void ExploreIndexMap(int begIndex){
 
-        if(begIndex == 0) Debug("Total Keys = " + totalKeys);
+        if(begIndex == 0) {
+            Debug("Total Keys = " + totalKeys);
+            Debug("Total morse = " + encounteredSequences.size());
+        }
 
-        if(!indexMap.containsKey(begIndex)) return;
+        if(!beginMap.containsKey(begIndex)) return;
 
-        for(int endIndex : indexMap.get(begIndex)){
+        for(int endIndex : beginMap.get(begIndex)){
 
             if(endIndex == morseInput.length()){
             
                 totalCombinaisons++;
             
-            }else if(indexMap.containsKey(endIndex)){
+            }else if(beginMap.containsKey(endIndex)){
 
                 ExploreIndexMap(endIndex);
             }
@@ -72,7 +74,7 @@ class Solution {
 
         totalCombinaisons = 0;
 
-        indexMap = new TreeMap<Integer, List<Integer>>();
+        beginMap = new TreeMap<Integer, List<Integer>>();
         sequences = new TreeMap<String, Sequence>();
 
         for (int i = 0; i < dictionaryCount; i++) {
@@ -127,7 +129,9 @@ class Solution {
 
     public static class Sequence{
 
-        public List<Integer> indexes;
+        public List<Integer> begIndexes;
+        public List<Integer> endIndexes;
+
         public int occurences;
         public String asciiSequence;
         public String morseSequence;
@@ -135,138 +139,77 @@ class Solution {
         
         public Sequence(String word){
 
-            asciiSequence = word;
-            morseSequence = TraduceToMorse(asciiSequence);
-            length = morseSequence.length();
+            morseSequence = TraduceToMorse(word);
 
-            indexes = new ArrayList<Integer>();
+            if(encounteredSequences.containsKey(morseSequence)){
 
-            if(morseInput.indexOf(morseSequence, 0) >= 0){
+                this.Set(encounteredSequences.get(morseSequence));
+
+                for(int begIndex : this.begIndexes){
+                    int endIndex = begIndex + this.length;
+                    AddIndexes(begIndex, endIndex);
+                }
+
+            }else if(morseInput.indexOf(morseSequence, 0) >= 0){
+
+                asciiSequence = word;
+
+                length = morseSequence.length();
+
+                begIndexes = new ArrayList<Integer>();
+                endIndexes = new ArrayList<Integer>();
+
+                encounteredSequences.put(morseSequence, this);
 
                 for(int i = 0; i < morseInput.length();  i++){
 
-                    int lastIndex = morseInput.indexOf(morseSequence, i);
+                    int begIndex = morseInput.indexOf(morseSequence, i);
+                    int endIndex = begIndex + length;
     
-                    if(lastIndex > -1 && !indexes.contains(lastIndex)){
+                    if(begIndex > -1 && !begIndexes.contains(begIndex)){
                         occurences++;
-                        indexes.add(lastIndex);
-                    }
+
+                        begIndexes.add(begIndex);
+                        endIndexes.add(endIndex);
+
+                        AddIndexes(begIndex, endIndex);                        
+
+                    }  
                 }
             }
 
-
-
+            //System.out.printf("%s : %s\n", occurences, morseSequence);
             totalKeys += occurences;
+        }
 
-            for(int i = 0; i < indexes.size(); i++){
+        public void AddIndexes(int begIndex, int endIndex){
+            
+            if(!beginMap.containsKey(begIndex)) beginMap.put(begIndex, new ArrayList<Integer>());
+            if(!endMap.containsKey(endIndex)) endMap.put(endIndex, new ArrayList<Integer>());
+            
+            endMap.get(endIndex).add(begIndex);
+            beginMap.get(begIndex).add(endIndex);            
+        }
 
-                int begIndex = indexes.get(i);
-                int endIndex = begIndex + length;
+        public void Set(Sequence mSequence){
 
-                if(!indexMap.containsKey(begIndex)) indexMap.put(begIndex, new ArrayList<Integer>());
-
-                //Debug(begIndex + " " + endIndex + " ");
-
-                indexMap.get(begIndex).add(endIndex);                
-            }            
+            begIndexes = mSequence.begIndexes;
+            endIndexes = mSequence.endIndexes;
+    
+            occurences = mSequence.occurences;
+            asciiSequence = mSequence.asciiSequence;
+            length = mSequence.length;            
         }
 
         public void Print(){
             System.err.printf("%s : occurences = %s, indexes : ", this.morseSequence, this.occurences);
 
-            for(Integer index : this.indexes){
+            for(Integer index : this.begIndexes){
                 System.err.print("" + index + " ");
             }
     
             System.err.print("\n");             
         }
-    }
-
-    public static class Combinaison{
-
-        public List<Sequence> sequenceList;
-        public boolean IsValid;
-        public int length;
-        public String strCombinaison;
-        public int missingChars;
-
-        public Combinaison(String mStrCombinaison){
-
-            strCombinaison = mStrCombinaison;
-            missingChars = CountMissing();
-
-            sequenceList = new ArrayList<Sequence>();
-            IsValid = true;            
-        }
-
-        public boolean TryInsertAll(Sequence mSequence){
-
-            String beforeInsert = strCombinaison;
-
-            for(int index : mSequence.indexes){
-                
-                int begIndex = index;
-                int endIndex = index + mSequence.length;
-
-                String subSequence = strCombinaison.substring(begIndex, endIndex);
-                StringBuffer strBufCombinaison = new StringBuffer(strCombinaison);
-
-                if(subSequence.equals("0".repeat(subSequence.length()))){
-                    
-                    strCombinaison = strBufCombinaison.replace(begIndex, endIndex, mSequence.morseSequence).toString();
-                }
-
-            }
-            
-            missingChars = strCombinaison.length() - strCombinaison.replace("0", "").length();
-
-            return beforeInsert != strCombinaison ? true : false;
-        }
-
-        public boolean TryInsert(Sequence mSequence, int Listindex){
-            
-            String beforeInsert = strCombinaison;
-
-            int index = mSequence.indexes.get(Listindex);
-
-            int begIndex = index;
-            int endIndex = index + mSequence.length;
-
-            String subSequence = strCombinaison.substring(begIndex, endIndex);
-            StringBuffer strBufCombinaison = new StringBuffer(strCombinaison);
-
-            if(subSequence.equals("0".repeat(subSequence.length()))){
-                
-                strCombinaison = strBufCombinaison.replace(begIndex, endIndex, mSequence.morseSequence).toString();
-            }
-
-            missingChars = CountMissing();
-
-            return beforeInsert != strCombinaison ? true : false;
-        }
-
-        public boolean CanInsert(Sequence sequence, int listIndex){
-            
-            if(listIndex >= sequence.indexes.size()) return false;
-
-            int index = sequence.indexes.get(listIndex);
-
-            int begIndex = index;
-            int endIndex = index + sequence.length;
-
-            String subSequence = strCombinaison.substring(begIndex, endIndex);
-
-            return subSequence.equals("0".repeat(subSequence.length()));
-        }
-
-        public int CountMissing(){
-            return strCombinaison.length() - strCombinaison.replace("0", "").length();
-        }
-
-        public void Print(){
-            System.err.println(strCombinaison);
-        }
-
     }
 
     //Functions for switching local to online running
@@ -348,7 +291,9 @@ class Solution {
         totalCombinaisons = 0;
         totalKeys = 0;
 
-        indexMap = new TreeMap<Integer, List<Integer>>();
+        encounteredSequences = new TreeMap<String, Sequence>();
+        beginMap = new TreeMap<Integer, List<Integer>>();
+        endMap = new TreeMap<Integer, List<Integer>>();
         sequences = new TreeMap<String, Sequence>();
 
         for (int i = 0; i < unicodeWords.length; i++) {
@@ -371,7 +316,6 @@ class Solution {
         ParseValidator(unicodeWords);
 
         return 1;
-
     }
 
     static long Validator_2(){
@@ -382,7 +326,6 @@ class Solution {
         ParseValidator(unicodeWords);
 
         return 1;
-
     }
 
     static long Validator_3(){
@@ -393,7 +336,6 @@ class Solution {
         ParseValidator(unicodeWords);
 
         return 2;
-
     }
         
     static long Validator_4(){
@@ -409,7 +351,6 @@ class Solution {
         ParseValidator(unicodeWords);
 
         return 57330892800L; //57 330 892 800
-
     }
 
     static long Validator_5(){
@@ -420,7 +361,6 @@ class Solution {
         ParseValidator(unicodeWords);
 
         return 125;
-
     }    
 
     static long Validator_6(){
@@ -431,7 +371,6 @@ class Solution {
         ParseValidator(unicodeWords);
 
         return 2971215073L; //2 971 215 073
-
     } 
     
     public static List<String> ReadFile(String fullPath) {
