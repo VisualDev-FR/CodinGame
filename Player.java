@@ -29,13 +29,22 @@ class Solution {
 
     static void ExploreIndexMap(int begIndex){
 
-/*         if(begIndex == 0) {
-            Debug("Total Keys = " + totalKeys);
-            Debug("Total morse = " + encounteredSequences.size());
-        } */
+        if(begIndex == 0) {
+            System.err.printf("nbNodes : %s\n", nodes.size());
+            System.err.printf("Branches : %s\n", branchesCount);
+        }
+
+        totalCombinaisons = 1;
         
-        System.err.printf("nbNodes : %s\n", nodes.size());
-        System.err.printf("Branches : %s\n", branchesCount);
+        for(Node node : nodes.values()){
+
+            System.err.printf("Node %s : connection : %s isValid : %s isAlone : %s\n", node.ID, node.connections, node.IsValid(), (!node.begConnected && !node.endConnected));
+
+            if(node.connections >0 && node.IsValid()){
+                totalCombinaisons *= node.connections;                
+            }           
+
+        }
 
     }
 
@@ -61,8 +70,11 @@ class Solution {
         dictionaryCount = in.nextInt();
 
         totalCombinaisons = 0;
+        branchesCount = 0;
 
+        encounteredSequences = new TreeMap<String, Sequence>();
         sequences = new TreeMap<String, Sequence>();
+        nodes = new TreeMap<Integer, Node>();
 
         for (int i = 0; i < dictionaryCount; i++) {
 
@@ -132,6 +144,9 @@ class Solution {
 
             if(encounteredSequences.containsKey(morseSequence)){
 
+                branches = new ArrayList<int[]>();
+                indexes = new ArrayList<Integer>();
+
                 this.Duplicate(encounteredSequences.get(morseSequence));
 
             }else{
@@ -164,10 +179,21 @@ class Solution {
                     begIndex = morseInput.indexOf(morseSequence, i);
 
                 }
-            }
+
+            }        
 
 
         }
+
+        public void Print(){
+            System.err.printf("%s : ", this.morseSequence);
+
+            for(Integer index : this.indexes){
+                System.err.print("" + index + " ");
+            }
+    
+            System.err.print("\n");             
+        }          
 
         public void Duplicate(Sequence mSequence){
 
@@ -213,6 +239,8 @@ class Solution {
             Node minNode = mNode.ID < this.ID ? mNode : this;
             Node maxNode = mNode.ID < this.ID ? this : mNode;
 
+            minNode.connections++;
+
             maxNode.nodesFrom.add(minNode);
             minNode.nodesTo.add(maxNode);
 
@@ -220,7 +248,10 @@ class Solution {
             maxNode.endConnected = maxNode.endConnected || minNode.endConnected;
             
             minNode.begConnected = minNode.begConnected || maxNode.begConnected;
-            minNode.endConnected = minNode.endConnected || maxNode.endConnected;          
+            minNode.endConnected = minNode.endConnected || maxNode.endConnected;
+
+            if(minNode.endConnected) minNode.nodesFrom.forEach(node -> node.endConnected  = true);
+            if(maxNode.begConnected) maxNode.nodesTo.forEach(node -> node.begConnected = true);
         }
 
         public boolean IsValid(){
@@ -310,13 +341,14 @@ class Solution {
         sequences = new TreeMap<String, Sequence>();
         nodes = new TreeMap<Integer, Node>();
 
+        //Debug(morseInput);
+
         for (int i = 0; i < unicodeWords.length; i++) {
             
             Sequence mSequence = new Sequence(unicodeWords[i]);
 
-            if (mSequence.occurences > 0){
-
-                //mSequence.Print();
+            if (mSequence.indexes.size() > 0){ 
+                //mSequence.Print();               
                 sequences.put(mSequence.asciiSequence, mSequence);
             }
         }
