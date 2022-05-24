@@ -5,16 +5,14 @@ import java.io.FileNotFoundException;
 class Solution {
 
     static TreeMap<Character, String> traductions;
-    static TreeMap<String, Sequence> sequences;
     static TreeMap<String, Sequence> encounteredSequences;
-
-    static TreeMap<Integer, List<Integer>> beginMap;
-    static TreeMap<Integer, List<Integer>> endMap;
+    static TreeMap<Integer, Node> nodes;
 
     static String morseInput;    
     static int dictionaryCount;
+    static int[][] adjacentMatrix;
 
-    static long totalKeys = 0;
+    static long branchesCount = 0;
 
     static String[] morseWords;
     static int[] lengthTable;   
@@ -22,33 +20,54 @@ class Solution {
 
     public static void main(String args[]) {
 
-        InitializeLetters();
+        Initialize();
+        //LocalSession(0);
+        OnlineSession();
 
-        LocalSession(0);
-        //OnlineSession();
     }
 
-    static void ExploreIndexMap(int begIndex){
+    static void CountCombinaisons(){
+        Debug(" ");
 
-        if(begIndex == 0) {
-            Debug("Total Keys = " + totalKeys);
-            Debug("Total morse = " + encounteredSequences.size());
+        for(int i = 0; i < adjacentMatrix.length;  i++){
+
+            Debug(Arrays.toString(adjacentMatrix[i]));
+
         }
+        Debug(" ");
 
-        if(!beginMap.containsKey(begIndex)) return;
+        int nodesCount = adjacentMatrix.length;
 
-        for(int endIndex : beginMap.get(begIndex)){
+        totalCombinaisons = adjacentMatrix[nodesCount-1][0];
 
-            if(endIndex == morseInput.length()){
-            
-                totalCombinaisons++;
-            
-            }else if(beginMap.containsKey(endIndex)){
+        int[][] matProd = adjacentMatrix;
+        
+        for(int i = 0; i < nodesCount-1;  i++){
 
-                ExploreIndexMap(endIndex);
-            }
-        }        
+            matProd = ProdMat(nodesCount, adjacentMatrix, matProd);
+
+            totalCombinaisons += matProd[nodesCount-1][0];
+        }
     }
+
+    static int[][] ProdMat(int N ,int[][] matrix_1, int[][] matrix_2){
+
+        int[][] matrix_3 = new int[N][N];
+
+        for(int i = 0; i < N; i++){
+
+            for(int j = 0; j < i; j++){
+                
+                for(int k = 0; k < N; k++){
+                    matrix_3[i][j] += matrix_1[i][k] * matrix_2[k][j];
+                }
+            }
+
+            Debug(Arrays.toString(matrix_3[i]));
+        }        
+        Debug(" ");
+        return matrix_3;
+    }    
 
     static String TraduceToMorse(String word){
         
@@ -71,24 +90,22 @@ class Solution {
         morseInput = in.next();        
         dictionaryCount = in.nextInt();
 
-        totalCombinaisons = 0;
-
-        beginMap = new TreeMap<Integer, List<Integer>>();
-        sequences = new TreeMap<String, Sequence>();
+        adjacentMatrix = new int[morseInput.length()+1][morseInput.length()+1];
 
         for (int i = 0; i < dictionaryCount; i++) {
 
-            Sequence mSequence = new Sequence(in.next());
-
-            if (mSequence.occurences > 0){
-
-                sequences.put(mSequence.asciiSequence, mSequence);
-            }            
+            new Sequence(in.next());          
         }
     }
 
-    static void InitializeLetters(){
+    static void Initialize(){
 
+        totalCombinaisons = 0;
+        branchesCount = 0;
+
+        encounteredSequences = new TreeMap<String, Sequence>();
+        //sequences = new TreeMap<String, Sequence>();
+        nodes = new TreeMap<Integer, Node>();        
         traductions = new TreeMap<Character, String>();
 
         traductions.put('A', ".-"   );
@@ -128,90 +145,112 @@ class Solution {
 
     public static class Sequence{
 
-        public List<Integer> begIndexes;
-        public List<Integer> endIndexes;
+        public List<int[]> branches;
+        public List<Integer> indexes; //TODO: essayer de le supprimer, normalement avec la dernière optimisation du compte d'occurences, on ne devrait plus en avoir besoin
 
-        public int occurences;
-        public String asciiSequence;
+        //public int occurences;
+        //public String asciiSequence;
         public String morseSequence;
         public int length;
         
         public Sequence(String word){
 
             morseSequence = TraduceToMorse(word);
+            //asciiSequence = word; //TODO: Supprimer
+            length = morseSequence.length();
 
             if(encounteredSequences.containsKey(morseSequence)){
 
-                this.Set(encounteredSequences.get(morseSequence));
+                branches = new ArrayList<int[]>();
+                indexes = new ArrayList<Integer>();
 
-                for(int begIndex : this.begIndexes){
-                    int endIndex = begIndex + this.length;
-                    AddIndexes(begIndex, endIndex);
-                }
+                this.Duplicate(encounteredSequences.get(morseSequence));
 
-            }else if(morseInput.indexOf(morseSequence, 0) >= 0){
-
-                asciiSequence = word;
-
-                length = morseSequence.length();
-
-                begIndexes = new ArrayList<Integer>();
-                endIndexes = new ArrayList<Integer>();
+            }else{
 
                 encounteredSequences.put(morseSequence, this);
 
+                branches = new ArrayList<int[]>();
+                indexes = new ArrayList<Integer>();
+                
                 int i = 0;
-                int begIndex = morseInput.indexOf(morseSequence, i);                
+                int begIndex = morseInput.indexOf(morseSequence, i);
 
                 while(begIndex > -1){
 
-                    if(begIndex > -1 && !begIndexes.contains(begIndex)){
+                    if(begIndex > -1 && !indexes.contains(begIndex)){
 
+                        indexes.add(begIndex);
+    
                         int endIndex = begIndex + length;
-                        occurences++;
+    
+                        Node beginNode = nodes.containsKey(begIndex) ? nodes.get(begIndex) : new Node(nodes.size(), begIndex);
+                        Node endNode = nodes.containsKey(endIndex) ? nodes.get(endIndex) : new Node(nodes.size(), endIndex);
+                        
+                        beginNode.Connect(endNode);                    
+                        branches.add(new int[]{begIndex, endIndex});
+                        branchesCount++;
+                    }
 
-                        begIndexes.add(begIndex);
-                        endIndexes.add(endIndex);
-
-                        AddIndexes(begIndex, endIndex);
-                    } 
-                    
                     i = morseInput.indexOf(morseSequence, i) + 1;
                     begIndex = morseInput.indexOf(morseSequence, i);
-                }                
+
+                }
+
+            }        
+
+
+        }
+
+        public void Duplicate(Sequence mSequence){
+
+            for(int[] branch : mSequence.branches){
+
+                branchesCount++;
+                
+                Node begNode = nodes.get(branch[0]);
+                Node endNode = nodes.get(branch[1]);
+
+                begNode.Connect(endNode);
+
             }
-
-            //System.out.printf("%s : %s\n", occurences, morseSequence);
-            totalKeys += occurences;
-        }
-
-        public void AddIndexes(int begIndex, int endIndex){
-            
-            if(!beginMap.containsKey(begIndex)) beginMap.put(begIndex, new ArrayList<Integer>());
-            if(!endMap.containsKey(endIndex)) endMap.put(endIndex, new ArrayList<Integer>());
-            
-            endMap.get(endIndex).add(begIndex);
-            beginMap.get(begIndex).add(endIndex);  
-        }
-
-        public void Set(Sequence mSequence){
-
-            begIndexes = mSequence.begIndexes;
-            endIndexes = mSequence.endIndexes;
-    
-            occurences = mSequence.occurences;
-            asciiSequence = mSequence.asciiSequence;
-            length = mSequence.length;            
         }
 
         public void Print(){
-            System.err.printf("%s : occurences = %s, indexes : ", this.morseSequence, this.occurences);
+            System.err.printf("%s : ", this.morseSequence);
 
-            for(Integer index : this.begIndexes){
+            for(Integer index : this.indexes){
                 System.err.print("" + index + " ");
             }
     
             System.err.print("\n");             
+        }
+    }
+
+    public static class Node{
+
+        public List<Node> nodesFrom;
+        public List<Node> nodesTo;
+        
+        public int ID;
+        public int index;
+
+        public Node(int nodeID, int nodeIndex){
+
+            ID = nodeID;
+            index = nodeIndex;
+
+            if(!nodes.containsKey(index)) nodes.put(index, this);
+        }
+
+        public void Connect(Node mNode){
+
+            Node minNode = mNode.index < this.index ? mNode : this;
+            Node maxNode = mNode.index < this.index ? this : mNode;
+
+            System.err.printf("Connect : node %s[index : %s] + node %s[index : %s] \n", minNode.ID, minNode.index, maxNode.ID, maxNode.index);
+
+            adjacentMatrix[maxNode.index][minNode.index]++;
         }
     }
 
@@ -221,12 +260,14 @@ class Solution {
 
         ReadInputs();
 
-        ExploreIndexMap(0);
+        CountCombinaisons();
 
         System.out.println(totalCombinaisons);        
     }
 
     static void LocalSession(int number){
+
+        Initialize();
 
         if(number == 0){
 
@@ -240,38 +281,29 @@ class Solution {
 
             if(number == 0){
 
-                for(int i = 1; i < 6; i++){
-
-                    long answer = GetValidator(i);
-            
-                    ExploreIndexMap(0);
-                    
-                    System.out.println(" ");
-                    System.out.printf(" Validator %s : Answer = %s / Found = %s \n\n", number, answer, totalCombinaisons);
-
-                }
+                for(int i = 1; i < 6; i++) RunLocal(i);
 
             }else{
 
-                long answer = GetValidator(number);
-                
-                ExploreIndexMap(0);
-
-                System.out.println(" ");
-                System.out.printf(" Validator %s : Answer = %s / Found = %s \n\n", number, answer, totalCombinaisons);           
+                RunLocal(number);
             }        
 
             System.out.println(" ");
             LocalSession(0);
         
         }else{
-            long answer = GetValidator(number);
-                
-            ExploreIndexMap(0);
-
-            System.out.println(" ");
-            System.out.printf(" Validator %s : Answer = %s / Found = %s \n\n", number, answer, totalCombinaisons);
+            RunLocal(number);
         }
+    }
+
+    static void RunLocal(int Validator){
+
+        long answer = GetValidator(Validator);
+                
+        CountCombinaisons();
+
+        System.out.println(" ");
+        System.out.printf(" Validator %s : Answer = %s / Found = %s \n\n", Validator, answer, totalCombinaisons);
     }
 
     static long GetValidator(int number){
@@ -291,23 +323,10 @@ class Solution {
 
     static void ParseValidator(String[] unicodeWords){
 
-        totalCombinaisons = 0;
-        totalKeys = 0;
+        adjacentMatrix = new int[morseInput.length()+1][morseInput.length()+1];
 
-        encounteredSequences = new TreeMap<String, Sequence>();
-        beginMap = new TreeMap<Integer, List<Integer>>();
-        endMap = new TreeMap<Integer, List<Integer>>();
-        sequences = new TreeMap<String, Sequence>();
-
-        for (int i = 0; i < unicodeWords.length; i++) {
-            
-            Sequence mSequence = new Sequence(unicodeWords[i]);
-
-            if (mSequence.occurences > 0){
-
-                //mSequence.Print();
-                sequences.put(mSequence.asciiSequence, mSequence);
-            }
+        for (int i = 0; i < unicodeWords.length; i++) {            
+            new Sequence(unicodeWords[i]);
         }
     }
 
