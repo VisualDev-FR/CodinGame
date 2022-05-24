@@ -10,7 +10,8 @@ class Solution {
 
     static String morseInput;    
     static int dictionaryCount;
-    static int[][] adjacentMatrix;
+    //static int[][] adjacentMatrix;
+    static Matrix adjacentMatrix;
 
     static long branchesCount = 0;
 
@@ -19,70 +20,56 @@ class Solution {
     static long totalCombinaisons;
     static boolean nullMatrix;
     static long nbIterations;
-
-    static boolean[] emptyColumns; //TODO: mémoriser les colonnes vides pour ne pas les traiter dans le calcul de produit
-    static boolean[] emptyRows;
+    static int matrixSize;    
 
     public static void main(String args[]) {
 
         Initialize();
-        //LocalSession(0);
+        LocalSession(0);
         //OnlineSession();
     }
 
     static void CountCombinaisons(){
-        Debug(" ");
 
-        for(int i = 0; i < adjacentMatrix.length;  i++){
+        Matrix matProd = adjacentMatrix;   
 
-            Debug(Arrays.toString(adjacentMatrix[i]));
-
-        }
-        Debug(" ");
-
-        int nodesCount = adjacentMatrix.length;
-
-        totalCombinaisons = adjacentMatrix[nodesCount-1][0];
-
-        int[][] matProd = adjacentMatrix;
+        totalCombinaisons = adjacentMatrix.Get(matrixSize-1, 0);
 
         nbIterations = 0;
         
-        for(int i = 0; i < nodesCount-1;  i++){
+        for(int i = 0; i < matrixSize;  i++){
+
+            matProd.Print();
 
             matProd = ProdMat(i, adjacentMatrix, matProd);
-
-            totalCombinaisons += matProd[nodesCount-1][0];
+            totalCombinaisons += matProd.Get(matrixSize - 1, 0);
 
             if(nullMatrix) return;
         }
     }
 
-    static int[][] ProdMat(int N ,int[][] matrix_1, int[][] matrix_2){
+    static Matrix ProdMat(int N, Matrix matrix_1, Matrix matrix_2){
 
-        int matrixSize = matrix_1.length;
-        
-        int[][] matrix_3 = new int[matrixSize][matrixSize];
+        Matrix matrix_3 = new Matrix();
 
         nullMatrix = true;
 
-        for(int i = N; i <matrixSize; i++){
+        for(int i = N; i < matrixSize; i++){
 
             for(int j = 0; j < i - N; j++){
-                
-                for(int k = N; k < i ; k++){
-                    
-                    matrix_3[i][j] += matrix_1[i][k] * matrix_2[k][j];
 
-                    nullMatrix = matrix_3[i][j] == 0 && nullMatrix;
+                for(int k = N; k < i ; k++){
+
+                    long increaseValue = matrix_1.Get(i, k) * matrix_2.Get(k, j);
+                    matrix_3.Increase(i, j, increaseValue);
+
+                    nullMatrix = increaseValue == 0L && nullMatrix;
 
                     nbIterations++;
-                }
+                }                
             }
-
-            //Debug(Arrays.toString(matrix_3[i]));
         }        
-        //Debug(" ");
+
         return matrix_3;
     }    
 
@@ -107,7 +94,7 @@ class Solution {
         morseInput = in.next();        
         dictionaryCount = in.nextInt();
 
-        adjacentMatrix = new int[morseInput.length()+1][morseInput.length()+1];
+        //adjacentMatrix = new int[morseInput.length()+1][morseInput.length()+1];
 
         for (int i = 0; i < dictionaryCount; i++) {
 
@@ -120,8 +107,8 @@ class Solution {
         totalCombinaisons = 0;
         branchesCount = 0;
 
+        adjacentMatrix = new Matrix();
         encounteredSequences = new TreeMap<String, Sequence>();
-        //sequences = new TreeMap<String, Sequence>();
         nodes = new TreeMap<Integer, Node>();        
         traductions = new TreeMap<Character, String>();
 
@@ -165,8 +152,6 @@ class Solution {
         public List<int[]> branches;
         public List<Integer> indexes; //TODO: essayer de le supprimer, normalement avec la dernière optimisation du compte d'occurences, on ne devrait plus en avoir besoin
 
-        //public int occurences;
-        //public String asciiSequence;
         public String morseSequence;
         public int length;
         
@@ -267,24 +252,55 @@ class Solution {
 
             //System.err.printf("Connect : node %s[index : %s] + node %s[index : %s] \n", minNode.ID, minNode.index, maxNode.ID, maxNode.index);
 
-            adjacentMatrix[maxNode.index][minNode.index]++;
+            //adjacentMatrix[maxNode.index][minNode.index]++;
+            adjacentMatrix.Increase(maxNode.index, minNode.index, 1L);
         }
     }
 
     public static class Matrix{
 
-        Map<String, Integer> values;
+        Map<String, Long> values;
+        List<Integer> nonEmptyColumns;
+        List<Integer> nonEmptyRows;
 
-        public Matrix(int m, int n){
-            values = new HashMap<String, Integer>();
+        public Matrix(){
+            values = new HashMap<String, Long>();
+            nonEmptyColumns = new ArrayList<Integer>();
+            nonEmptyRows = new ArrayList<Integer>();
         }
 
-        public void Increase(int m, int n, int value){
-            values.put("key", values.getOrDefault("key", 0)+1);
+        public void Reset(){
+            nonEmptyColumns = new ArrayList<Integer>();
+            nonEmptyRows = new ArrayList<Integer>();            
         }
 
-        public int Get(int m, int n){
-            return values.getOrDefault(m + ":" + n, 0);
+        public void Increase(int m, int n, long value){
+            
+            values.put(m + ":" + n, values.getOrDefault(m + ":" + n, 0L) + value);
+            
+            if(!nonEmptyColumns.contains(m)) nonEmptyColumns.add(m);
+            if(!nonEmptyRows.contains(n)) nonEmptyRows.add(n);
+        }
+
+        public long Get(int m, int n){
+            return values.getOrDefault(m + ":" + n, 0L);
+        }
+
+        public void Print(){
+
+            for(int i = 0; i < matrixSize; i++){
+
+                String[] arrayTemp = new String[matrixSize];
+
+                for(int j = 0; j < matrixSize; j++){
+                    arrayTemp[j] = this.Get(i, j) > 0 ? ""+this.Get(i, j) : ".";
+                }
+
+                Debug(String.join(" ", arrayTemp));
+            }
+
+            Debug(" ");
+
         }
 
     }
@@ -334,11 +350,13 @@ class Solution {
     static void RunLocal(int Validator){
 
         long answer = GetValidator(Validator);
+
+        matrixSize = morseInput.length() + 1;
                 
         CountCombinaisons();
 
         System.out.println(" ");
-        System.out.printf(" Validator %s : Answer = %s / Found = %s nbIterations = %s \n\n", Validator, answer, totalCombinaisons, nbIterations);
+        System.out.printf(" Validator %s : Answer = %s / Found = %s nbIterations = %s matrixSize = %s \n\n", Validator, answer, totalCombinaisons, nbIterations, matrixSize);
     }
 
     static long GetValidator(int number){
@@ -358,7 +376,7 @@ class Solution {
 
     static void ParseValidator(String[] unicodeWords){
 
-        adjacentMatrix = new int[morseInput.length()+1][morseInput.length()+1];
+        //adjacentMatrix = new int[morseInput.length()+1][morseInput.length()+1];
 
         for (int i = 0; i < unicodeWords.length; i++) {            
             new Sequence(unicodeWords[i]);
