@@ -31,7 +31,15 @@ class Solution {
 
     static void CountCombinaisons(){
 
+        nbIterations = 0;
+
+        Debug("intersections 1 : " + adjacentMatrix.intersections.size());
+
+        adjacentMatrix = SquareMat(adjacentMatrix);
+
         //adjacentMatrix.Print();
+
+        Debug("intersections 2 : " + adjacentMatrix.intersections.size());
 
 /*         Matrix matProd = adjacentMatrix;
         
@@ -58,7 +66,33 @@ class Solution {
         } */
     }
 
-/*     static Matrix ProdMat(int N, Matrix matrix_1, Matrix matrix_2){
+    static Matrix ProdMat(Matrix matrixA, Matrix matrixB){
+
+        Matrix matProd = new Matrix();
+
+        List<Intersection> intersections = matrixA.HasIntersections(matrixB);
+
+        return null;
+    }
+
+    static Matrix SquareMat(Matrix matrix){
+
+        Matrix sqrMatrix = new Matrix();
+
+        for(Intersection intersection : matrix.intersections.values()){
+
+            nbIterations++;
+
+            long increaseValue = matrix.Get(intersection.parentRow1, intersection.parentColumn1) * matrix.Get(intersection.parentRow2, intersection.parentColumn2);    
+
+            sqrMatrix.Increase(intersection.row, intersection.column, increaseValue);
+
+        }
+
+        return sqrMatrix;
+    }
+
+ /*     static Matrix ProdMat(int N, Matrix matrix_1, Matrix matrix_2){
 
         Matrix matrix_3 = new Matrix();
 
@@ -68,27 +102,26 @@ class Solution {
 
             for(int j = 0; j < i - N; j++){
 
-                if(matrix_1.rows.contains(j) && matrix_2.columns.contains(i)){
-                    
-                    for(int k = N; k < i ; k++){
+                for(int k = N; k < i ; k++){
 
-                        long increaseValue = matrix_1.Get(i, k) * matrix_2.Get(k, j);
-                        matrix_3.Increase(i, j, increaseValue);
-    
-                        nullMatrix = increaseValue == 0L && nullMatrix;
-    
-                        nbIterations++;
-                    }
-    
-                    kMax = Math.max(i-N, kMax);
+                    long increaseValue = matrix_1.Get(i, k) * matrix_2.Get(k, j);
                     
-                    System.err.printf("%s %s %s\n", i, j, i-N);
+                    matrix_3.Increase(i, j, increaseValue);
+
+                    nullMatrix = increaseValue == 0L && nullMatrix;
+
+                    nbIterations++;
                 }
+
+                kMax = Math.max(i-N, kMax);
+                
+                System.err.printf("%s %s %s\n", i, j, i-N);
+
             }
         }        
 
         return matrix_3;
-    }   */  
+    } */  
 
     static String TraduceToMorse(String word){
         
@@ -278,6 +311,7 @@ class Solution {
         Map<String, Intersection> intersections;
 
         public Matrix(){
+
             values = new HashMap<String, Long>();
             columns = new HashMap<Integer, List<Integer>>();
             rows = new HashMap<Integer, List<Integer>>();
@@ -288,7 +322,7 @@ class Solution {
             
             values.put(row + ":" + column, values.getOrDefault(row + ":" + column, 0L) + value);
 
-            SearchIntersections(row, column);
+            SearchIntersections(row, column, this);
 
             columns.putIfAbsent(column, new ArrayList<Integer>());
             rows.putIfAbsent(row, new ArrayList<Integer>());
@@ -298,23 +332,34 @@ class Solution {
 
         }
 
-        private void SearchIntersections(int row, int column){
+        private void SearchIntersections(int row, int column, Matrix matrix){
 
-            if(rows.containsKey(column)){
-                for(int mColumn : rows.get(column)){
+            if(matrix.rows.containsKey(column)){
+                
+                for(int mColumn : matrix.rows.get(column)){
 
                     String interKey = ""+row+":"+column+":"+column+":"+mColumn;
 
-                    intersections.putIfAbsent(interKey, new Intersection(row, column, column, mColumn)); //TODO: remettre un if !containsKey classique en cas de problème de prformances, cela permetrra d'eviter des instanciations d'Intersections inutiles
+                    if(!intersections.containsKey(interKey)){
+
+                        Intersection intersection = new Intersection(row, column, column, mColumn);
+
+                        intersections.put(interKey, intersection);
+                    }
                 }
             }
 
-            if(columns.containsKey(row)){                
-                for(int mRow : columns.get(row)){
+            if(matrix.columns.containsKey(row)){
+
+                for(int mRow : matrix.columns.get(row)){
 
                     String interKey = ""+mRow+":"+row+":"+row+":"+column;
+                    
+                    if(!intersections.containsKey(interKey)){
 
-                    intersections.putIfAbsent(interKey, new Intersection(mRow, row, row, column)); //TODO: remettre un if !containsKey classique en cas de problème de prformances, cela permetrra d'eviter des instanciations d'Intersections inutiles
+                        Intersection intersection = new Intersection(mRow, row, row, column);
+                        intersections.put(interKey, intersection);
+                    }
                 }
             }
         }
@@ -406,8 +451,6 @@ class Solution {
 
     static void LocalSession(int number){
 
-        Initialize();
-
         if(number == 0){
 
             System.out.print("Validator to run ?  ");
@@ -420,7 +463,7 @@ class Solution {
 
             if(number == 0){
 
-                for(int i = 1; i < 6; i++) RunLocal(i);
+                for(int i = 1; i < 7; i++) RunLocal(i);
 
             }else{
 
@@ -436,6 +479,8 @@ class Solution {
     }
 
     static void RunLocal(int Validator){
+
+        Initialize();
 
         long answer = GetValidator(Validator);
 
