@@ -26,12 +26,14 @@ class Solution {
 
         Initialize();
         LocalSession(0);
-        //OnlineSession();
+        //OnlineSession();        
     }
 
     static void CountCombinaisons(){
 
-        Matrix matProd = adjacentMatrix;
+        //adjacentMatrix.Print();
+
+/*         Matrix matProd = adjacentMatrix;
         
         try {
             matProd.PrintTxtFile();
@@ -53,10 +55,10 @@ class Solution {
             totalCombinaisons += matProd.Get(matrixSize - 1, 0);
 
             if(nullMatrix) return;
-        }
+        } */
     }
 
-    static Matrix ProdMat(int N, Matrix matrix_1, Matrix matrix_2){
+/*     static Matrix ProdMat(int N, Matrix matrix_1, Matrix matrix_2){
 
         Matrix matrix_3 = new Matrix();
 
@@ -86,7 +88,7 @@ class Solution {
         }        
 
         return matrix_3;
-    }    
+    }   */  
 
     static String TraduceToMorse(String word){
         
@@ -173,7 +175,6 @@ class Solution {
         public Sequence(String word){
 
             morseSequence = TraduceToMorse(word);
-            //asciiSequence = word; //TODO: Supprimer
             length = morseSequence.length();
 
             if(encounteredSequences.containsKey(morseSequence)){
@@ -265,9 +266,6 @@ class Solution {
             Node minNode = mNode.index < this.index ? mNode : this;
             Node maxNode = mNode.index < this.index ? this : mNode;
 
-            //System.err.printf("Connect : node %s[index : %s] + node %s[index : %s] \n", minNode.ID, minNode.index, maxNode.ID, maxNode.index);
-
-            //adjacentMatrix[maxNode.index][minNode.index]++;
             adjacentMatrix.Increase(maxNode.index, minNode.index, 1L);
         }
     }
@@ -275,20 +273,15 @@ class Solution {
     public static class Matrix{
 
         Map<String, Long> values;
-
         Map<Integer, List<Integer>> columns;
         Map<Integer, List<Integer>> rows;
-
-        //List<Integer> columns;
-        //List<Integer> rows;
-        List<Intersection> intersections;
-
+        Map<String, Intersection> intersections;
 
         public Matrix(){
             values = new HashMap<String, Long>();
             columns = new HashMap<Integer, List<Integer>>();
             rows = new HashMap<Integer, List<Integer>>();
-            intersections = new ArrayList<Intersection>();
+            intersections = new HashMap<String, Intersection>();
         }
 
         public void Increase(int row, int column, long value){
@@ -297,8 +290,8 @@ class Solution {
 
             SearchIntersections(row, column);
 
-            if(!columns.containsKey(column)) columns.put(column, new ArrayList<Integer>());
-            if(!rows.containsKey(row)) rows.put(row, new ArrayList<Integer>());
+            columns.putIfAbsent(column, new ArrayList<Integer>());
+            rows.putIfAbsent(row, new ArrayList<Integer>());
 
             columns.get(column).add(row);
             rows.get(row).add(column);
@@ -308,14 +301,20 @@ class Solution {
         private void SearchIntersections(int row, int column){
 
             if(rows.containsKey(column)){
-                for(int mColumn : rows.get(row)){
-                    intersections.add(new Intersection(row, column, row, mColumn));
+                for(int mColumn : rows.get(column)){
+
+                    String interKey = ""+row+":"+column+":"+column+":"+mColumn;
+
+                    intersections.putIfAbsent(interKey, new Intersection(row, column, column, mColumn)); //TODO: remettre un if !containsKey classique en cas de problème de prformances, cela permetrra d'eviter des instanciations d'Intersections inutiles
                 }
             }
 
             if(columns.containsKey(row)){                
-                for(int mRow : columns.get(column)){
-                    intersections.add(new Intersection(row, column, mRow, column));
+                for(int mRow : columns.get(row)){
+
+                    String interKey = ""+mRow+":"+row+":"+row+":"+column;
+
+                    intersections.putIfAbsent(interKey, new Intersection(mRow, row, row, column)); //TODO: remettre un if !containsKey classique en cas de problème de prformances, cela permetrra d'eviter des instanciations d'Intersections inutiles
                 }
             }
         }
@@ -365,12 +364,32 @@ class Solution {
     }
 
     public static class Intersection{
+        
+        public int row;
+        public int column;
 
-        public int m;
-        public int n;
+        public int parentRow1;
+        public int parentColumn1;
+
+        public int parentRow2;
+        public int parentColumn2;
 
         public Intersection(int m1, int n1, int m2, int n2){
 
+            parentRow1 = m1;
+            parentColumn1 = n1;
+
+            parentRow2 = m2;
+            parentColumn2 = n2;
+
+            row = m1;
+            column = n2;
+
+            //this.Print();
+        }
+
+        public void Print(){
+            System.err.printf("%s %s : parent_1 = %s %s parent_2 = %s %s\n", row, column, parentRow1, parentColumn1, parentRow2, parentColumn2);
         }
     }
 
@@ -425,7 +444,7 @@ class Solution {
         CountCombinaisons();
 
         System.out.println(" ");
-        System.out.printf(" Validator %s : Answer = %s / Found = %s nbIterations = %s matrixSize = %s \n\n", Validator, answer, totalCombinaisons, nbIterations, matrixSize);
+        System.out.printf(" Validator %s : Answer = %s / Found = %s nbIterations = %s matrixSize = %s intersections : %s \n\n", Validator, answer, totalCombinaisons, nbIterations, matrixSize, adjacentMatrix.intersections.size());
     }
 
     static long GetValidator(int number){
