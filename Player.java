@@ -1,6 +1,5 @@
 import java.util.*;
-import java.io.File;
-import java.io.FileNotFoundException;
+import java.io.*;
 
 class Solution {
 
@@ -20,7 +19,8 @@ class Solution {
     static long totalCombinaisons;
     static boolean nullMatrix;
     static long nbIterations;
-    static int matrixSize;    
+    static int matrixSize;
+    static int kMax;
 
     public static void main(String args[]) {
 
@@ -31,7 +31,15 @@ class Solution {
 
     static void CountCombinaisons(){
 
-        Matrix matProd = adjacentMatrix;   
+        Matrix matProd = adjacentMatrix;
+        
+        try {
+            matProd.PrintTxtFile();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
 
         totalCombinaisons = adjacentMatrix.Get(matrixSize-1, 0);
 
@@ -39,7 +47,7 @@ class Solution {
         
         for(int i = 0; i < matrixSize;  i++){
 
-            matProd.Print();
+            //matProd.Print();
 
             matProd = ProdMat(i, adjacentMatrix, matProd);
             totalCombinaisons += matProd.Get(matrixSize - 1, 0);
@@ -58,15 +66,22 @@ class Solution {
 
             for(int j = 0; j < i - N; j++){
 
-                for(int k = N; k < i ; k++){
+                if(matrix_1.rows.contains(j) && matrix_2.columns.contains(i)){
+                    
+                    for(int k = N; k < i ; k++){
 
-                    long increaseValue = matrix_1.Get(i, k) * matrix_2.Get(k, j);
-                    matrix_3.Increase(i, j, increaseValue);
-
-                    nullMatrix = increaseValue == 0L && nullMatrix;
-
-                    nbIterations++;
-                }                
+                        long increaseValue = matrix_1.Get(i, k) * matrix_2.Get(k, j);
+                        matrix_3.Increase(i, j, increaseValue);
+    
+                        nullMatrix = increaseValue == 0L && nullMatrix;
+    
+                        nbIterations++;
+                    }
+    
+                    kMax = Math.max(i-N, kMax);
+                    
+                    System.err.printf("%s %s %s\n", i, j, i-N);
+                }
             }
         }        
 
@@ -260,30 +275,53 @@ class Solution {
     public static class Matrix{
 
         Map<String, Long> values;
-        List<Integer> nonEmptyColumns;
-        List<Integer> nonEmptyRows;
+
+        Map<Integer, List<Integer>> columns;
+        Map<Integer, List<Integer>> rows;
+
+        //List<Integer> columns;
+        //List<Integer> rows;
+        List<Intersection> intersections;
+
 
         public Matrix(){
             values = new HashMap<String, Long>();
-            nonEmptyColumns = new ArrayList<Integer>();
-            nonEmptyRows = new ArrayList<Integer>();
+            columns = new HashMap<Integer, List<Integer>>();
+            rows = new HashMap<Integer, List<Integer>>();
+            intersections = new ArrayList<Intersection>();
         }
 
-        public void Reset(){
-            nonEmptyColumns = new ArrayList<Integer>();
-            nonEmptyRows = new ArrayList<Integer>();            
-        }
-
-        public void Increase(int m, int n, long value){
+        public void Increase(int row, int column, long value){
             
-            values.put(m + ":" + n, values.getOrDefault(m + ":" + n, 0L) + value);
-            
-            if(!nonEmptyColumns.contains(m)) nonEmptyColumns.add(m);
-            if(!nonEmptyRows.contains(n)) nonEmptyRows.add(n);
+            values.put(row + ":" + column, values.getOrDefault(row + ":" + column, 0L) + value);
+
+            SearchIntersections(row, column);
+
+            if(!columns.containsKey(column)) columns.put(column, new ArrayList<Integer>());
+            if(!rows.containsKey(row)) rows.put(row, new ArrayList<Integer>());
+
+            columns.get(column).add(row);
+            rows.get(row).add(column);
+
         }
 
-        public long Get(int m, int n){
-            return values.getOrDefault(m + ":" + n, 0L);
+        private void SearchIntersections(int row, int column){
+
+            if(rows.containsKey(column)){
+                for(int mColumn : rows.get(row)){
+                    intersections.add(new Intersection(row, column, row, mColumn));
+                }
+            }
+
+            if(columns.containsKey(row)){                
+                for(int mRow : columns.get(column)){
+                    intersections.add(new Intersection(row, column, mRow, column));
+                }
+            }
+        }
+
+        public long Get(int row, int column){
+            return values.getOrDefault(row + ":" + column, 0L);
         }
 
         public void Print(){
@@ -303,6 +341,37 @@ class Solution {
 
         }
 
+        public void PrintTxtFile() throws FileNotFoundException, UnsupportedEncodingException{
+
+            PrintWriter writer = new PrintWriter("Matrix.txt", "UTF-8");
+            
+            //writer.println("The first line");
+            //writer.println("The second line");
+            
+            for(int i = 0; i < matrixSize; i++){
+
+                String[] arrayTemp = new String[matrixSize];
+
+                for(int j = 0; j < matrixSize; j++){
+                    arrayTemp[j] = this.Get(i, j) > 0 ? ""+this.Get(i, j) : " ";
+                }
+
+                writer.println(String.join(";", arrayTemp));
+            }            
+            
+            writer.close();
+
+        }
+    }
+
+    public static class Intersection{
+
+        public int m;
+        public int n;
+
+        public Intersection(int m1, int n1, int m2, int n2){
+
+        }
     }
 
     //Functions for switching local to online running
