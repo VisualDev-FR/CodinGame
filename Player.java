@@ -33,15 +33,7 @@ class Solution {
 
         nbIterations = 0;
 
-        Debug("intersections 1 : " + adjacentMatrix.intersections.size());
-
-        adjacentMatrix = SquareMat(adjacentMatrix);
-
-        //adjacentMatrix.Print();
-
-        Debug("intersections 2 : " + adjacentMatrix.intersections.size());
-
-/*         Matrix matProd = adjacentMatrix;
+        Matrix matProd = adjacentMatrix;
         
         try {
             matProd.PrintTxtFile();
@@ -53,26 +45,76 @@ class Solution {
 
         totalCombinaisons = adjacentMatrix.Get(matrixSize-1, 0);
 
-        nbIterations = 0;
-        
         for(int i = 0; i < matrixSize;  i++){
 
             //matProd.Print();
 
-            matProd = ProdMat(i, adjacentMatrix, matProd);
+            matProd = ProdMat(adjacentMatrix, matProd);
             totalCombinaisons += matProd.Get(matrixSize - 1, 0);
 
             if(nullMatrix) return;
-        } */
+        }
     }
 
     static Matrix ProdMat(Matrix matrixA, Matrix matrixB){
 
         Matrix matProd = new Matrix();
 
-        List<Intersection> intersections = matrixA.HasIntersections(matrixB);
+        List<String> intersections = new ArrayList<String>();
 
-        return null;
+        for(int row : matrixA.rows.keySet()){
+            
+            for(int column : matrixA.rows.get(row)){
+
+                if(matrixB.rows.containsKey(column)){
+                
+                    for(int mColumn : matrixB.rows.get(column)){
+
+                        nbIterations++;
+    
+                        String interKey = "" + row + ":" + column + ":" + column + ":" + mColumn;
+    
+                        if(!intersections.contains(interKey)){
+    
+                            Intersection intersection = new Intersection(row, column, column, mColumn);
+
+                            long increaseValue = matrixA.Get(intersection.parentRow1, intersection.parentColumn1) * matrixB.Get(intersection.parentRow2, intersection.parentColumn2);
+                            
+                            nullMatrix = increaseValue == 0L && nullMatrix;
+
+                            matProd.Increase(intersection.row, intersection.column, increaseValue);                            
+    
+                            intersections.add(interKey);
+                        }
+                    }
+                }
+    
+                if(matrixB.columns.containsKey(row)){
+    
+                    for(int mRow : matrixB.columns.get(row)){
+
+                        nbIterations++;
+    
+                        String interKey = "" + mRow + ":" + row + ":" + row + ":" + column;
+                        
+                        if(!intersections.contains(interKey)){
+    
+                            Intersection intersection = new Intersection(mRow, row, row, column);
+
+                            long increaseValue = matrixA.Get(intersection.parentRow1, intersection.parentColumn1) * matrixB.Get(intersection.parentRow2, intersection.parentColumn2);
+                            
+                            nullMatrix = increaseValue == 0L && nullMatrix;
+
+                            matProd.Increase(intersection.row, intersection.column, increaseValue);                             
+
+                            intersections.add(interKey);
+                        }
+                    }
+                }
+            }
+        }
+
+        return matProd;
     }
 
     static Matrix SquareMat(Matrix matrix){
