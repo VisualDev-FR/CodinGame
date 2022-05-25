@@ -9,7 +9,6 @@ class Solution {
 
     static String morseInput;    
     static int dictionaryCount;
-    //static int[][] adjacentMatrix;
     static Matrix adjacentMatrix;
 
     static long branchesCount = 0;
@@ -20,7 +19,6 @@ class Solution {
     static boolean nullMatrix;
     static long nbIterations;
     static int matrixSize;
-    static int kMax;
 
     public static void main(String args[]) {
 
@@ -32,16 +30,9 @@ class Solution {
     static void CountCombinaisons(){
 
         nbIterations = 0;
+        matrixSize = morseInput.length() + 1;
 
         Matrix matProd = adjacentMatrix;
-        
-        try {
-            matProd.PrintTxtFile();
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (UnsupportedEncodingException e) {
-            e.printStackTrace();
-        }
 
         totalCombinaisons = adjacentMatrix.Get(matrixSize-1, 0);
 
@@ -75,14 +66,12 @@ class Solution {
                         String interKey = "" + row + ":" + column + ":" + column + ":" + mColumn;
     
                         if(!intersections.contains(interKey)){
-    
-                            Intersection intersection = new Intersection(row, column, column, mColumn);
 
-                            long increaseValue = matrixA.Get(intersection.parentRow1, intersection.parentColumn1) * matrixB.Get(intersection.parentRow2, intersection.parentColumn2);
+                            long increaseValue = matrixA.Get(row, column) * matrixB.Get(column, mColumn);
                             
                             nullMatrix = increaseValue == 0L && nullMatrix;
 
-                            matProd.Increase(intersection.row, intersection.column, increaseValue);                            
+                            matProd.Increase(row, mColumn, increaseValue);                            
     
                             intersections.add(interKey);
                         }
@@ -98,14 +87,12 @@ class Solution {
                         String interKey = "" + mRow + ":" + row + ":" + row + ":" + column;
                         
                         if(!intersections.contains(interKey)){
-    
-                            Intersection intersection = new Intersection(mRow, row, row, column);
 
-                            long increaseValue = matrixA.Get(intersection.parentRow1, intersection.parentColumn1) * matrixB.Get(intersection.parentRow2, intersection.parentColumn2);
+                            long increaseValue = matrixA.Get(mRow, row) * matrixB.Get(row, column);
                             
                             nullMatrix = increaseValue == 0L && nullMatrix;
 
-                            matProd.Increase(intersection.row, intersection.column, increaseValue);                             
+                            matProd.Increase(mRow, column, increaseValue);                             
 
                             intersections.add(interKey);
                         }
@@ -116,54 +103,6 @@ class Solution {
 
         return matProd;
     }
-
-    static Matrix SquareMat(Matrix matrix){
-
-        Matrix sqrMatrix = new Matrix();
-
-        for(Intersection intersection : matrix.intersections.values()){
-
-            nbIterations++;
-
-            long increaseValue = matrix.Get(intersection.parentRow1, intersection.parentColumn1) * matrix.Get(intersection.parentRow2, intersection.parentColumn2);    
-
-            sqrMatrix.Increase(intersection.row, intersection.column, increaseValue);
-
-        }
-
-        return sqrMatrix;
-    }
-
- /*     static Matrix ProdMat(int N, Matrix matrix_1, Matrix matrix_2){
-
-        Matrix matrix_3 = new Matrix();
-
-        nullMatrix = true;
-
-        for(int i = N; i < matrixSize; i++){
-
-            for(int j = 0; j < i - N; j++){
-
-                for(int k = N; k < i ; k++){
-
-                    long increaseValue = matrix_1.Get(i, k) * matrix_2.Get(k, j);
-                    
-                    matrix_3.Increase(i, j, increaseValue);
-
-                    nullMatrix = increaseValue == 0L && nullMatrix;
-
-                    nbIterations++;
-                }
-
-                kMax = Math.max(i-N, kMax);
-                
-                System.err.printf("%s %s %s\n", i, j, i-N);
-
-            }
-        }        
-
-        return matrix_3;
-    } */  
 
     static String TraduceToMorse(String word){
         
@@ -186,10 +125,7 @@ class Solution {
         morseInput = in.next();        
         dictionaryCount = in.nextInt();
 
-        //adjacentMatrix = new int[morseInput.length()+1][morseInput.length()+1];
-
         for (int i = 0; i < dictionaryCount; i++) {
-
             new Sequence(in.next());          
         }
     }
@@ -242,7 +178,7 @@ class Solution {
     public static class Sequence{
 
         public List<int[]> branches;
-        public List<Integer> indexes; //TODO: essayer de le supprimer, normalement avec la dernière optimisation du compte d'occurences, on ne devrait plus en avoir besoin
+        public List<Integer> indexes;
 
         public String morseSequence;
         public int length;
@@ -289,10 +225,7 @@ class Solution {
                     begIndex = morseInput.indexOf(morseSequence, i);
 
                 }
-
-            }        
-
-
+            }
         }
 
         public void Duplicate(Sequence mSequence){
@@ -350,21 +283,17 @@ class Solution {
         Map<String, Long> values;
         Map<Integer, List<Integer>> columns;
         Map<Integer, List<Integer>> rows;
-        Map<String, Intersection> intersections;
 
         public Matrix(){
 
             values = new HashMap<String, Long>();
             columns = new HashMap<Integer, List<Integer>>();
             rows = new HashMap<Integer, List<Integer>>();
-            intersections = new HashMap<String, Intersection>();
         }
 
         public void Increase(int row, int column, long value){
             
             values.put(row + ":" + column, values.getOrDefault(row + ":" + column, 0L) + value);
-
-            SearchIntersections(row, column, this);
 
             columns.putIfAbsent(column, new ArrayList<Integer>());
             rows.putIfAbsent(row, new ArrayList<Integer>());
@@ -372,38 +301,6 @@ class Solution {
             columns.get(column).add(row);
             rows.get(row).add(column);
 
-        }
-
-        private void SearchIntersections(int row, int column, Matrix matrix){
-
-            if(matrix.rows.containsKey(column)){
-                
-                for(int mColumn : matrix.rows.get(column)){
-
-                    String interKey = ""+row+":"+column+":"+column+":"+mColumn;
-
-                    if(!intersections.containsKey(interKey)){
-
-                        Intersection intersection = new Intersection(row, column, column, mColumn);
-
-                        intersections.put(interKey, intersection);
-                    }
-                }
-            }
-
-            if(matrix.columns.containsKey(row)){
-
-                for(int mRow : matrix.columns.get(row)){
-
-                    String interKey = ""+mRow+":"+row+":"+row+":"+column;
-                    
-                    if(!intersections.containsKey(interKey)){
-
-                        Intersection intersection = new Intersection(mRow, row, row, column);
-                        intersections.put(interKey, intersection);
-                    }
-                }
-            }
         }
 
         public long Get(int row, int column){
@@ -450,41 +347,13 @@ class Solution {
         }
     }
 
-    public static class Intersection{
-        
-        public int row;
-        public int column;
-
-        public int parentRow1;
-        public int parentColumn1;
-
-        public int parentRow2;
-        public int parentColumn2;
-
-        public Intersection(int m1, int n1, int m2, int n2){
-
-            parentRow1 = m1;
-            parentColumn1 = n1;
-
-            parentRow2 = m2;
-            parentColumn2 = n2;
-
-            row = m1;
-            column = n2;
-
-            //this.Print();
-        }
-
-        public void Print(){
-            System.err.printf("%s %s : parent_1 = %s %s parent_2 = %s %s\n", row, column, parentRow1, parentColumn1, parentRow2, parentColumn2);
-        }
-    }
-
     //Functions for switching local to online running
 
     static void OnlineSession(){
 
         ReadInputs();
+
+        matrixSize = morseInput.length() + 1;
 
         CountCombinaisons();
 
@@ -525,13 +394,11 @@ class Solution {
         Initialize();
 
         long answer = GetValidator(Validator);
-
-        matrixSize = morseInput.length() + 1;
-                
+  
         CountCombinaisons();
 
         System.out.println(" ");
-        System.out.printf(" Validator %s : Answer = %s / Found = %s nbIterations = %s matrixSize = %s intersections : %s \n\n", Validator, answer, totalCombinaisons, nbIterations, matrixSize, adjacentMatrix.intersections.size());
+        System.out.printf(" Validator %s : Answer = %s / Found = %s nbIterations = %s matrixSize = %s \n\n", Validator, answer, totalCombinaisons, nbIterations, matrixSize);
     }
 
     static long GetValidator(int number){
@@ -550,8 +417,6 @@ class Solution {
     }
 
     static void ParseValidator(String[] unicodeWords){
-
-        //adjacentMatrix = new int[morseInput.length()+1][morseInput.length()+1];
 
         for (int i = 0; i < unicodeWords.length; i++) {            
             new Sequence(unicodeWords[i]);
