@@ -16,13 +16,15 @@ class Solution {
 
     public static void main(String args[]) {
 
-        LocalSession(0);
-        //OnlineSession();        
+        //LocalSession(0);
+        OnlineSession();        
     }
 
     static void CountCombinaisons(){
 
         Initialize();
+
+        nbIterations = 0;
 
         List<String> morseSequences = new ArrayList<String>();
 
@@ -30,11 +32,13 @@ class Solution {
             
             String traduction = TraduceToMorse(word);
 
-            if(!morseSequences.contains(word)){
+            if(!morseSequences.contains(word) && morseInput.indexOf(traduction) > -1){
                 morseSequences.add(traduction);
             }
             
         }
+
+        System.err.printf("morseCount = %s\n", morseSequences.size());
 
         long[] countTable = new long[morseInput.length()+1];
         countTable[morseInput.length()] = 1;
@@ -55,7 +59,7 @@ class Solution {
                 }
             }
             countTable[i] = acc;
-            System.err.printf("countTable[%s] = %s\n", i, acc);
+            //System.err.printf("countTable[%s] = %s\n", i, acc);
         }
 
         totalCombinaisons = countTable[0];
@@ -175,7 +179,7 @@ class Solution {
         CountCombinaisons();
 
         System.out.println(" ");
-        System.out.printf(" Validator %s : Answer = %s / Found = %s nbIterations = %s\n\n", Validator, answer, totalCombinaisons, nbIterations);
+        System.out.printf("Validator %s : Answer = %s / Found = %s nbIterations = %s\n\n", Validator, answer, totalCombinaisons, nbIterations);
     }
 
     static long GetValidator(int number){
