@@ -28,7 +28,7 @@ class Solution {
 
         if(answers.size() == 0){
 
-            Path bestPath = SearchPath(stations.get(startID), new Path(stations.get(startID)));
+            Path bestPath = SearchPath(stations.get(startID), new Path(stations.get(startID), null));
             
             if(bestPath == null){
                 answers.add("IMPOSSIBLE");
@@ -42,20 +42,19 @@ class Solution {
 
     static Path SearchPath(Station startStation, Path currentPath){
 
-        for(Connection connection : startStation.connections){
+        if(startStation.ID.equals(endID) && currentPath.totalDist < minDist){
 
-            Station nextStation = connection.stationTo;
+            minDist = currentPath.totalDist;
+            return currentPath;
+        
+        }else{
 
-            if(nextStation.ID.equals(endID)){
-                
-                Path bestPath = currentPath.Add(connection);
-                minDist = bestPath.totalDist;
-                return bestPath;
-            
-            }else{
+            for(Connection connection : startStation.connections){
+
+                Station nextStation = connection.stationTo;    
 
                 boolean looping = currentPath.IDList.contains(nextStation.ID);
-                Path nextPath = currentPath.Add(connection);
+                Path nextPath = new Path(null, currentPath).Add(connection);
 
                 if(!looping && nextPath.totalDist < minDist){
                     return SearchPath(nextStation, nextPath);
@@ -194,7 +193,9 @@ class Solution {
 
         double totalDist;
 
-        private Path(Station startStation_){
+        private Path(Station startStation_, Path path){
+
+            if(path == null){
 
                 IDList = new ArrayList<String>();
                 nameList = new ArrayList<String>();
@@ -208,6 +209,17 @@ class Solution {
                 endStation = startStation_;
     
                 totalDist = 0;
+            }else{
+
+                IDList = new ArrayList<String>(path.IDList);
+                nameList = new ArrayList<String>(path.nameList);
+                stations = new ArrayList<Station>(path.stations);                
+
+                startStation = path.startStation;
+                endStation = path.endStation;
+    
+                totalDist = path.totalDist;
+            }
         }
 
         private Path Add(Connection connection){
@@ -219,7 +231,7 @@ class Solution {
             totalDist += connection.distance;
             endStation = connection.stationTo; 
 
-            return this;
+            return new Path(null, this);
         }
 
         public void Print(){
