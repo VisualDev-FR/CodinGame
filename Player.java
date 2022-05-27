@@ -1,108 +1,111 @@
-//Reverse Minesweeper : https://www.codingame.com/training/easy/reverse-minesweeper
-
 import java.util.*;
 
 class Solution {
 
-    static Scanner in;
+    static Map<String, Station> stations;
+    static Map<String, Branch> branches;
+    
+    static String startID;
+    static String endID;
 
     public static void main(String args[]) {
-
-        in = new Scanner(System.in);
         
-        int mapWidth = in.nextInt();
-        int mapHeight = in.nextInt();        
+        stations = new HashMap<String, Station>();
+        branches = new HashMap<String, Branch>();
+
+        ReadInputs();
+
+        System.err.printf("Stations : %s Branches : %s start = %s end = %s\n", stations.size(), branches.size(), stations.get(startID).name, stations.get(endID).name);
+
+    }
+
+    static void ReadInputs(){
+
+        Scanner in = new Scanner(System.in);
+
+        startID = ParseLine(in.next());
+        endID = ParseLine(in.next());
         
-        Map<String, int[]> minesCoords = ReadInputs(mapHeight);
-        List<int[]> directions = GetDirections();
+        int N = in.nextInt();
+        
+        if (in.hasNextLine()) in.nextLine();
+        
+        for (int i = 0; i < N; i++) {
+            Station station = new Station(in.nextLine());
+            stations.putIfAbsent(station.ID, station);
+        }
+        
+        int M = in.nextInt();
+        
+        if (in.hasNextLine()) in.nextLine();
+        
+        for (int i = 0; i < M; i++) {
+            String[] strBranch = in.nextLine().split(" ");
 
-        for(int row = 0; row < mapHeight; row++){
+            Station from = stations.get(ParseLine(strBranch[0]));
+            Station to = stations.get(ParseLine(strBranch[1]));
 
-            String answer = "";
-
-            for(int column = 0; column < mapWidth; column++){
-
-                String caseKey = "" + row + ":" + column;
-
-                if(minesCoords.containsKey(caseKey)){
-
-                    answer += ".";
-
-                }else{
-
-                    int mineCount = 0;
-
-                    for(int[] direction : directions){
-                        
-                        int nextRow = row + direction[0];
-                        int nextColumn = column + direction[1];
-
-                        String nextKey = "" + nextRow + ":" + nextColumn;
-
-                        mineCount += minesCoords.containsKey(nextKey) ? 1 : 0;
-                    }
-
-                    answer += mineCount > 0 ? mineCount : ".";
-                }
-            }
-
-            System.out.println(answer);
+            branches.putIfAbsent(from+":"+to, new Branch(from, to));
         }
     }
 
-    static List<int[]> GetDirections(){
-        
-        List<int[]> directions = new ArrayList<int[]>();
+    static double GetDistance(Station stationA, Station stationB){
 
-        directions.add(new int[]{ 0 ,  1});
-        directions.add(new int[]{-1 ,  1});
-        directions.add(new int[]{-1 ,  0});
-        directions.add(new int[]{-1 , -1});
+        double x = (stationB.longitude - stationA.longitude) * Math.cos((stationA.latitude + stationB.latitude) / 2);
+        double y = (stationB.latitude - stationA.latitude);
 
-        directions.add(new int[]{ 0 , -1});
-        directions.add(new int[]{ 1 , -1});
-        directions.add(new int[]{ 1 ,  0});
-        directions.add(new int[]{ 1 ,  1});
+        return 6371 * Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
 
-        return directions;
     }
 
-    static Map<String, int[]> ReadInputs(int mapHeight){
+    static String ParseLine(String line_){
+        return line_.split(":")[1].replace("\"", "");
+    }
+    
+    public static class Branch{
 
-        if (in.hasNextLine()) {
-            in.nextLine();
-        }
-
-        int row = 0;
-
-        Map<String, int[]> minesCoords = new HashMap<String, int[]>();
+        public Station from;
+        public Station to;
         
-        for (int i = 0; i < mapHeight; i++) {
-
-            String acsiiLine = in.nextLine();
-
-            System.err.println(acsiiLine);
-
-            int index = 0;
-            int column = acsiiLine.indexOf("x", index);
-
-            while(column > -1){
-
-                String mineKey = "" + row + ":" + column;
-                
-                int[] mineCoord = new int[]{row, column};
-
-                minesCoords.put(mineKey, mineCoord);
-
-                index = acsiiLine.indexOf("x", index) + 1;
-                column = acsiiLine.indexOf("x", index); 
-
-            }
-
-            row++;
-
+        public Branch(Station from_, Station to_){
+            from = from_;
+            to = to_;
         }
+    }
 
-        return minesCoords;
+    public static class Station{
+
+        public String ID;
+        public String name;
+
+        public double latitude;
+        public double longitude;
+
+        public int type; 
+
+        public Station(String line_){
+
+            /* 
+            0 L'identifiant unique de l'arrêt
+            1 Le nom complet de l'arrêt entouré du caractère guillemet "
+            2 La description de l'arrêt (non utilisée)
+            3 La latitude de l'arrêt (en degrés)
+            4 La longitude de l'arrêt (en degrés)
+            5 L'identifiant de la zone (non utilisé)
+            6 L'url de l'arrêt (non utilisée)
+            7 Le type d'arrêt
+            8 La station parente (non utilisée)
+            */            
+
+            String[] line = ParseLine(line_).split(",");
+
+            ID = line[0];
+            name = line[1].replace("\"", "");
+
+            latitude = Double.parseDouble(line[3]);
+            longitude = Double.parseDouble(line[4]);
+
+            type = Integer.parseInt(line[7]);
+        }
     }
 }
