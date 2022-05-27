@@ -4,17 +4,14 @@ import java.io.*;;
 class Solution {
 
     static Map<String, Station> stations;
-    static Map<String, Branch> branches;
     
     static String startID;
     static String endID;
     static List<String> answers;
+    static List<Path> paths;
+    static double minDist;
 
     public static void main(String args[]) {
-        
-        stations = new HashMap<String, Station>();
-        branches = new HashMap<String, Branch>();
-        answers = new ArrayList<String>();
 
         int localSession = 0;
 
@@ -25,12 +22,47 @@ class Solution {
         }
     }
 
-    static void SearchPath(){
+    public static void SubMain(){ 
+        
+        minDist = Double.MAX_VALUE;
 
-        answers.add("Reponse bidon");
+        if(answers.size() == 0){
 
-        System.err.printf("Stations : %s Branches : %s start = %s end = %s\n", stations.size(), branches.size(), stations.get(startID).name, stations.get(endID).name);
+            Path bestPath = SearchPath(stations.get(startID), new Path(stations.get(startID)));
+            
+            if(bestPath == null){
+                answers.add("IMPOSSIBLE");
+            }else{
+                answers = bestPath.nameList;
 
+                System.err.printf("\nstart : %s end : %s lenght : %s \n", bestPath.startStation.name, bestPath.endStation.name, bestPath.stations.size());
+            }            
+        }
+    }
+
+    static Path SearchPath(Station startStation, Path currentPath){
+
+        for(Connection connection : startStation.connections){
+
+            Station nextStation = connection.stationTo;
+
+            if(nextStation.ID.equals(endID)){
+                
+                Path bestPath = currentPath.Add(connection);
+                minDist = bestPath.totalDist;
+                return bestPath;
+            
+            }else{
+
+                boolean looping = currentPath.IDList.contains(nextStation.ID);
+                Path nextPath = currentPath.Add(connection);
+
+                if(!looping && nextPath.totalDist < minDist){
+                    return SearchPath(nextStation, nextPath);
+                }                
+            }            
+        }
+        return null;
     }
 
     static double GetDistance(Station stationA, Station stationB){
@@ -44,18 +76,48 @@ class Solution {
 
     static String ParseLine(String line_){
         return line_.split(":")[1].replace("\"", "");
-    }
-    
-    public static class Branch{
+    }    
 
-        public Station from;
-        public Station to;
+    static void ReadInputs(Scanner in){
+
+        stations = new HashMap<String, Station>();
+        answers = new ArrayList<String>();
+
+        startID = ParseLine(in.next());
+        endID = ParseLine(in.next());
         
-        public Branch(Station from_, Station to_){
-            from = from_;
-            to = to_;
+        int N = in.nextInt();
+        
+        if (in.hasNextLine()) in.nextLine();
+        
+        for (int i = 0; i < N; i++) {
+            Station station = new Station(in.nextLine());
+            stations.putIfAbsent(station.ID, station);
+
+            if(startID.equals(endID) && startID.equals(station.ID)) answers.add(station.name);
         }
-    }
+        
+        int M = in.nextInt();
+        
+        if (in.hasNextLine()) in.nextLine();
+        
+        for (int i = 0; i < M; i++) {
+            
+            String[] strBranch = in.nextLine().split(" ");
+
+            Station from = stations.get(ParseLine(strBranch[0]));
+            Station to = stations.get(ParseLine(strBranch[1]));
+
+            if(startID.equals(from.ID) && endID.equals(to.ID)){
+                answers.add(from.name);
+                answers.add(to.name);
+            }
+
+            from.Connect(to);;
+        }
+
+        System.err.printf("Stations : %s start = %s end = %s\n\n", stations.size(), stations.get(startID).name, stations.get(endID).name);
+    }    
 
     public static class Station{
 
@@ -65,7 +127,9 @@ class Solution {
         public double latitude;
         public double longitude;
 
-        public int type; 
+        public int type;
+
+        List<Connection> connections;
 
         public Station(String line_){
 
@@ -90,37 +154,81 @@ class Solution {
             longitude = Double.parseDouble(line[4]);
 
             type = Integer.parseInt(line[7]);
+
+            connections = new ArrayList<Connection>();
+        }
+
+        public void Connect(Station station){
+            connections.add(new Connection(this, station));
+        }
+
+        public void Print(){
+            System.err.printf("%s : name = %s / latitude = %s / longitude = %s / Type = %s / Connections = %s", ID, name, latitude, longitude, type, connections.size());
         }
     }
 
-    static void ReadInputs(Scanner in){
+    public static class Connection{
 
-        startID = ParseLine(in.next());
-        endID = ParseLine(in.next());
-        
-        int N = in.nextInt();
-        
-        if (in.hasNextLine()) in.nextLine();
-        
-        for (int i = 0; i < N; i++) {
-            Station station = new Station(in.nextLine());
-            stations.putIfAbsent(station.ID, station);
+        Station stationTo;
+        Station stationFrom;
+        double distance;
+
+        public Connection(Station stationFrom_, Station stationTo_){
+
+            stationFrom = stationFrom_;
+            stationTo = stationTo_;
+
+            distance = GetDistance(stationFrom, stationTo);
+
         }
-        
-        int M = in.nextInt();
-        
-        if (in.hasNextLine()) in.nextLine();
-        
-        for (int i = 0; i < M; i++) {
+    }
+
+    public static class Path{
+
+        private List<String> IDList;
+        private List<String> nameList;
+        private List<Station> stations;
+
+        private Station startStation;
+        private Station endStation;
+
+        double totalDist;
+
+        private Path(Station startStation_){
+
+                IDList = new ArrayList<String>();
+                nameList = new ArrayList<String>();
+                stations = new ArrayList<Station>();
+    
+                IDList.add(startStation_.ID);
+                nameList.add(startStation_.name);
+                stations.add(startStation_);
+    
+                startStation = startStation_;
+                endStation = startStation_;
+    
+                totalDist = 0;
+        }
+
+        private Path Add(Connection connection){
+
+            IDList.add(connection.stationTo.ID);
+            nameList.add(connection.stationTo.name);
+            stations.add(connection.stationTo);     
             
-            String[] strBranch = in.nextLine().split(" ");
+            totalDist += connection.distance;
+            endStation = connection.stationTo; 
 
-            Station from = stations.get(ParseLine(strBranch[0]));
-            Station to = stations.get(ParseLine(strBranch[1]));
-
-            branches.putIfAbsent(from+":"+to, new Branch(from, to));
+            return this;
         }
-    }    
+
+        public void Print(){
+            
+            for(Station station : stations){
+                System.err.println(station.name);
+            }
+        }
+    }
 
     //Running Sessions
 
@@ -155,7 +263,7 @@ class Solution {
 
         OnlineParsing();
 
-        SearchPath();
+        SubMain();
 
         String finalAnswers = String.join("\n", answers.toArray(new String[0]));
 
@@ -212,7 +320,7 @@ class Solution {
 
             in.close();
 
-            SearchPath();
+            SubMain();
 
             boolean sameSize = validatorAnswers.size() == answers.size() ? true : false;
 
@@ -222,7 +330,7 @@ class Solution {
 
                 String answer = i < answers.size() ? answers.get(i) : "Nothing";
 
-                String status = sameSize && valAnswer == answer ? "OK" : "NOK"; 
+                String status = sameSize && valAnswer.equals(answer) ? "OK" : "NOK"; 
 
                 System.err.printf("%s : %s / %s\n", status, valAnswer, answer);
             }            
