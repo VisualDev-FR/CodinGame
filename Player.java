@@ -19,14 +19,48 @@ class Player {
 
         while (true){
 
-            grid.Print();
-
             if(!firstTurn) ReadInputs(in);
 
-            System.out.println("UP"); // A single line with UP, DOWN, LEFT or RIGHT
+            grid.Print();
 
+            String bestDirection = "";
+
+            System.err.printf("myPosition = %s %s\n", lightCycles.get(myPlayerID).Y1, lightCycles.get(myPlayerID).X1);
+
+            for(String direction : directions.keySet()){
+
+                System.err.print(direction + " ");
+
+                int[] dirCoord = directions.get(direction);
+
+                int nextRow = lightCycles.get(myPlayerID).Y1 + dirCoord[0];
+                int nextCol = lightCycles.get(myPlayerID).X1 + dirCoord[1];
+
+                if(IsPositionValid(nextRow, nextCol)) bestDirection = direction;
+            }
+
+            System.out.println(bestDirection);
             firstTurn = false;
         }
+    }
+
+    static boolean IsPositionValid(int row, int col){
+
+        boolean isValid = false;
+
+        if(col >= 0 && col < 30 && row >=0 && row < 20){
+
+            isValid = grid.get(row, col) == -1;
+
+            System.err.printf("%s %s : %s (%s)\n", row, col, grid.get(row, col), isValid);
+        
+        }else{
+
+            System.err.printf("%s %s : %s (%s)\n", row, col, "?", isValid);
+        }
+
+        return isValid;
+
     }
 
     static void ReadFirstInputs(Scanner in){
@@ -134,6 +168,8 @@ class Player {
                 for(int j = 0; j < exploredGrid[0].length; j++){
 
                     //System.err.print(exploredGrid[i][j]);
+
+                    if(j % 5 == 0) System.err.print ("  ");
 
                     if(exploredGrid[i][j] == -1){
                         System.err.print(".");
