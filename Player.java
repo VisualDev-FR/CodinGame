@@ -1,5 +1,7 @@
 import java.util.*;
 
+import javax.swing.text.Position;
+
 class Player {
 
     static int nbOfPlayer;
@@ -33,7 +35,7 @@ class Player {
 */
 
             for(LightCycle lightCycle : lightCycles.values()){
-                System.err.printf("%s : %s\n", lightCycle.ID, GetDiffusedSurface(lightCycle));
+                System.err.printf("%s : %s\n", lightCycle.ID, GetDiffusedSurface(lightCycle, grid));
             }
 
             String bestDirection = "";
@@ -62,16 +64,68 @@ class Player {
             firstTurn = false;
         }
     }
+/*
 
-    static int[] CountMaxReachablePositions(){
+    //initial Call
+
+    maxEval = +infinity
+    for each direction from currentPosition{
+        eval = minimax(currentPosition, 6, true, -infinity, +infinity)
+        maxEval = Math.max(maxEval, eval)
+        bestDirection = direction
+    }
+
+    Play maxEval
+
+    static String MiniMax(int[] positionInMinimaxGraph, int depth, int maximizingPLayer, int alpha, int beta){
+ 
+        if depth == 0 or gameOver in position{
+            return static evaluation of position
+        }
+
+        if maximizingPlayer == true{
+            
+            maxEval = -infinity
+            
+            for each child of currentPosition{
+                eval = minimax(child position, depth-1, false, alpha, beta)
+                maxEval = Math.max(maxEval, eval)
+                alpha = Math.max(alpha, eval)
+                
+                if(beta <= alpha){
+                    break;
+                }
+            }
+            return maxEval;
+
+        }else{
+            
+            minEval = +infinity
+            
+            for each child of currentPosition{
+                
+                eval = minimax(childPosition, depth-1, true, alpha, beta)
+                minEval = Math.min(minEval, eval)
+                beta = Math.min(beta, eval)
+                
+                if(beta <= alpha){
+                    break;
+                }
+            }
+            Return minEval
+        }
+    }
+*/
+
+    static int[] CountMaxReachablePositions(Grid mGrid){
 
         int[] reachablePositions = new int[nbOfPlayer];
 
-        for(int i = 0; i < grid.exploredGrid.length; i++){
+        for(int i = 0; i < mGrid.exploredGrid.length; i++){
 
-            for(int j = 0; j < grid.exploredGrid[0].length; j++){
+            for(int j = 0; j < mGrid.exploredGrid[0].length; j++){
 
-                if(grid.exploredGrid[i][j].equals(".")){
+                if(mGrid.exploredGrid[i][j].equals(".")){
 
                     int minDist = 9999;
                     int minID = -1;
@@ -97,18 +151,18 @@ class Player {
 
     static int EvaluateScore(int nextRow, int nextCol, int bestScore){
 
-        if(!IsPositionValid(nextRow, nextCol)) return 0;
+        if(!IsPositionValid(nextRow, nextCol, grid)) return 0;
 
         return 1;
     }
 
-    static boolean IsPositionValid(int row, int col){
+    static boolean IsPositionValid(int row, int col, Grid mGrid){
 
         boolean isValid = false;
 
         if(col >= 0 && col < 30 && row >=0 && row < 20){
 
-            isValid = grid.get(row, col).equals(".");
+            isValid = mGrid.get(row, col).equals(".");
 
         }
 
@@ -254,13 +308,12 @@ class Player {
 
     // TESTING
 
-    static int GetDiffusedSurface(LightCycle mLightCycle){
+    static int GetDiffusedSurface(LightCycle mLightCycle, Grid mGrid){
 
         List<int[]> borders = new ArrayList<int[]>();
+        boolean[][] visitedPoints = new boolean[20][30];
 
         borders.add(new int[]{mLightCycle.Y1, mLightCycle.X1});
-
-        boolean[][] visitedPoints = new boolean[20][30];
 
         int bordersCount = 1;
 
@@ -277,7 +330,7 @@ class Player {
                     int borderRow = border[0] + direction[0];
                     int borderCol = border[1] + direction[1];
     
-                    if(IsPositionValid(borderRow, borderCol)){
+                    if(IsPositionValid(borderRow, borderCol, mGrid)){
 
                         if(visitedPoints[borderRow][borderCol] == false){
 
