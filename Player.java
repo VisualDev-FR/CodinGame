@@ -1,5 +1,5 @@
 import java.util.*;
-import java.io.*;;
+import java.io.*;
 
 class Solution {
 
@@ -8,12 +8,11 @@ class Solution {
     static String startID;
     static String endID;
     static List<String> answers;
-    static List<Path> paths;
     static double minDist;
 
     public static void main(String args[]) {
 
-        int localSession = 0;
+        int localSession = 99;
 
         if(localSession < 7 && localSession >= 0){
             LocalSession(localSession);
@@ -28,40 +27,88 @@ class Solution {
 
         if(answers.size() == 0){
 
-            Path bestPath = SearchPath(stations.get(startID), new Path(stations.get(startID), null));
+            List<Station> stationsToExplore = new ArrayList<Station>();
+
+            stationsToExplore.add(stations.get(startID));
+            stationsToExplore = SearchPath(stationsToExplore);
             
-            if(bestPath == null){
+            if(stationsToExplore == null){
                 answers.add("IMPOSSIBLE");
             }else{
-                answers = bestPath.nameList;
-
-                System.err.printf("\nstart : %s end : %s lenght : %s \n", bestPath.startStation.name, bestPath.endStation.name, bestPath.stations.size());
+                for(Station mStation : stationsToExplore){
+                    answers.add(mStation.name);
+                }
             }            
         }
     }
 
-    static Path SearchPath(Station startStation, Path currentPath){
+    static List<Station> SearchPath(List<Station> stationsToExplore){
 
-        if(startStation.ID.equals(endID) && currentPath.totalDist < minDist){
+        List<Station> bestPath = null;
+        List<List<Station>> pathList = new ArrayList<List<Station>>();
+        Map<String, Station> unexploredStations = new HashMap<String, Station>(stations);
 
-            minDist = currentPath.totalDist;
-            return currentPath;
-        
-        }else{
+        boolean pathFound = false;
 
-            for(Connection connection : startStation.connections){
+        pathList.add(stationsToExplore);
 
-                Station nextStation = connection.stationTo;    
+        while(unexploredStations.size() > 0 && !pathFound){
 
-                boolean looping = currentPath.IDList.contains(nextStation.ID);
-                Path nextPath = new Path(null, currentPath).Add(connection);
+            System.err.printf("unexploredStations : %s \n", unexploredStations.size());
 
-                if(!looping && nextPath.totalDist < minDist){
-                    return SearchPath(nextStation, nextPath);
-                }                
-            }            
+            List<List<Station>> pathListTemp = new ArrayList<List<Station>>(pathList);
+
+            for(List<Station> path : pathListTemp){
+
+                pathList.remove(path);
+
+                Station nextStation = path.get(path.size()-1);
+
+                unexploredStations.remove(nextStation.ID);
+
+                for(Connection border : nextStation.connections){
+
+                    Station endStation = border.stationTo;
+
+                    if(!path.contains(endStation)){
+
+                        path.add(endStation);
+                        pathList.add(path);
+                        
+                        if(endStation.ID.equals(endID)){
+
+                            double totalDist = GetTotalDist(path);
+
+                            if(totalDist < minDist){
+                                bestPath = path;
+                                minDist = totalDist;
+                                pathFound = true;
+                            }
+
+                        }
+                    }
+                }
+            }
         }
-        return null;
+
+        return bestPath;
+    }
+
+    static double GetTotalDist(List<Station> mStations){
+
+        double totalDist = 0;
+        Station lastStation = null;
+
+        for(Station mStation : mStations){
+
+            if(lastStation != null){
+                totalDist += GetDistance(lastStation, mStation);
+            }
+
+            lastStation = mStation;
+        }
+
+        return totalDist;
     }
 
     static double GetDistance(Station stationA, Station stationB){
@@ -191,9 +238,9 @@ class Solution {
         private Station startStation;
         private Station endStation;
 
-        double totalDist;
+        private double totalDist;
 
-        private Path(Station startStation_, Path path){
+        public Path(Station startStation_, Path path){
 
             if(path == null){
 
@@ -240,7 +287,7 @@ class Solution {
                 System.err.println(station.name);
             }
         }
-    }
+    }    
 
     //Running Sessions
 
