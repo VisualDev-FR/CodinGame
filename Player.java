@@ -1,419 +1,151 @@
 import java.util.*;
-import java.io.*;
 
-class Solution {
+class Player {
 
-    static Map<String, Station> stations;
-    
-    static String startID;
-    static String endID;
-    static List<String> answers;
-    static double minDist;
+    static int nbOfPlayer;
+    static int myPlayerID;
+
+    static Map <Integer, LightCycle> lightCycles;
+    static Map<String, int[]> directions;
+    static Grid grid;
 
     public static void main(String args[]) {
 
-        int localSession = 99;
+        Scanner in = new Scanner(System.in);
 
-        if(localSession < 7 && localSession >= 0){
-            LocalSession(localSession);
-        }else{
-            OnlineSession();
+        boolean firstTurn = true;
+
+        ReadFirstInputs(in);
+
+        while (true){
+
+            grid.Print();
+
+            if(!firstTurn) ReadInputs(in);
+
+            System.out.println("UP"); // A single line with UP, DOWN, LEFT or RIGHT
+
+            firstTurn = false;
         }
     }
 
-    public static void SubMain(){ 
+    static void ReadFirstInputs(Scanner in){
+
+        directions = new HashMap<String, int[]>();
+        directions.put("RIGHT", new int[]{ 0 ,  1});
+        directions.put("LEFT",  new int[]{ 0 , -1});
+        directions.put("UP",    new int[]{-1 ,  0});
+        directions.put("DOWN",  new int[]{ 1 ,  0});  
         
-        minDist = Double.MAX_VALUE;
+        grid = new Grid();
 
-        if(answers.size() == 0){
+        nbOfPlayer = in.nextInt(); // total number of players (2 to 4).
+        myPlayerID = in.nextInt(); // your player number (0 to 3).
 
-            List<Station> stationsToExplore = new ArrayList<Station>();
-
-            stationsToExplore.add(stations.get(startID));
-            stationsToExplore = SearchPath(stationsToExplore);
+        lightCycles = new HashMap<Integer, LightCycle>();
+        
+        for (int i = 0; i < nbOfPlayer; i++){
             
-            if(stationsToExplore == null){
-                answers.add("IMPOSSIBLE");
-            }else{
-                for(Station mStation : stationsToExplore){
-                    answers.add(mStation.name);
-                }
-            }            
+            LightCycle mLightCycle = new LightCycle(i);
+
+            mLightCycle.Update(in);
+
+            lightCycles.put(i, mLightCycle);            
         }
     }
-
-    static List<Station> SearchPath(List<Station> stationsToExplore){
-
-        List<Station> bestPath = null;
-        List<List<Station>> pathList = new ArrayList<List<Station>>();
-        Map<String, Station> unexploredStations = new HashMap<String, Station>(stations);
-
-        boolean pathFound = false;
-
-        pathList.add(stationsToExplore);
-
-        while(unexploredStations.size() > 0 && !pathFound){
-
-            System.err.printf("unexploredStations : %s \n", unexploredStations.size());
-
-            List<List<Station>> pathListTemp = new ArrayList<List<Station>>(pathList);
-
-            for(List<Station> path : pathListTemp){
-
-                pathList.remove(path);
-
-                Station nextStation = path.get(path.size()-1);
-
-                unexploredStations.remove(nextStation.ID);
-
-                for(Connection border : nextStation.connections){
-
-                    Station endStation = border.stationTo;
-
-                    if(!path.contains(endStation)){
-
-                        path.add(endStation);
-                        pathList.add(path);
-                        
-                        if(endStation.ID.equals(endID)){
-
-                            double totalDist = GetTotalDist(path);
-
-                            if(totalDist < minDist){
-                                bestPath = path;
-                                minDist = totalDist;
-                                pathFound = true;
-                            }
-
-                        }
-                    }
-                }
-            }
-        }
-
-        return bestPath;
-    }
-
-    static double GetTotalDist(List<Station> mStations){
-
-        double totalDist = 0;
-        Station lastStation = null;
-
-        for(Station mStation : mStations){
-
-            if(lastStation != null){
-                totalDist += GetDistance(lastStation, mStation);
-            }
-
-            lastStation = mStation;
-        }
-
-        return totalDist;
-    }
-
-    static double GetDistance(Station stationA, Station stationB){
-
-        double x = (stationB.longitude - stationA.longitude) * Math.cos((stationA.latitude + stationB.latitude) / 2);
-        double y = (stationB.latitude - stationA.latitude);
-
-        return 6371 * Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2));
-
-    }
-
-    static String ParseLine(String line_){
-        return line_.split(":")[1].replace("\"", "");
-    }    
 
     static void ReadInputs(Scanner in){
 
-        stations = new HashMap<String, Station>();
-        answers = new ArrayList<String>();
+        nbOfPlayer = in.nextInt(); // total number of players (2 to 4).
+        myPlayerID = in.nextInt(); // your player number (0 to 3).
 
-        startID = ParseLine(in.next());
-        endID = ParseLine(in.next());
-        
-        int N = in.nextInt();
-        
-        if (in.hasNextLine()) in.nextLine();
-        
-        for (int i = 0; i < N; i++) {
-            Station station = new Station(in.nextLine());
-            stations.putIfAbsent(station.ID, station);
-
-            if(startID.equals(endID) && startID.equals(station.ID)) answers.add(station.name);
+        for(LightCycle lightCycle : lightCycles.values()){
+            lightCycle.Update(in);
         }
-        
-        int M = in.nextInt();
-        
-        if (in.hasNextLine()) in.nextLine();
-        
-        for (int i = 0; i < M; i++) {
-            
-            String[] strBranch = in.nextLine().split(" ");
+    }
 
-            Station from = stations.get(ParseLine(strBranch[0]));
-            Station to = stations.get(ParseLine(strBranch[1]));
+    public static class LightCycle{
 
-            if(startID.equals(from.ID) && endID.equals(to.ID)){
-                answers.add(from.name);
-                answers.add(to.name);
+        private int ID;
+        private int X0;
+        private int Y0;
+        private int X1;
+        private int Y1;
+
+        private List<int[]> coords;
+        private boolean isDead;
+
+        public LightCycle(int mID){            
+            coords = new ArrayList<int[]>();
+            ID = mID;
+            isDead = false;
+        }
+
+        public void Update(Scanner in){
+
+            X0 = in.nextInt(); // starting X coordinate of lightcycle (or -1)
+            Y0 = in.nextInt(); // starting Y coordinate of lightcycle (or -1)
+            X1 = in.nextInt(); // starting X coordinate of lightcycle (can be the same as X0 if you play before this player)
+            Y1 = in.nextInt(); // starting Y coordinate of lightcycle (can be the same as Y0 if you play before this player)
+
+            isDead = X0 == -1 && Y0 == -1 && X1 == -1 && Y1 == -1;
+
+            if(isDead){
+
+                for(int[] coord : coords){
+                    grid.set(coord[1], coord[0], -1);
+                }
+
+            }else{
+                coords.add(new int[]{X1, Y1});
+                grid.set(Y1, X1, ID);
             }
+            
+        }
+    }
+    
+    public static class Grid{
 
-            from.Connect(to);;
+        int[][] exploredGrid;
+        
+        public Grid(){
+
+            exploredGrid = new int[20][30];
+
+            for(int i = 0; i < exploredGrid.length; i++){
+                for(int j = 0; j < exploredGrid[0].length; j++){
+                    exploredGrid[i][j] = -1;
+                }
+            }
         }
 
-        System.err.printf("Stations : %s start = %s end = %s\n\n", stations.size(), stations.get(startID).name, stations.get(endID).name);
-    }    
-
-    public static class Station{
-
-        public String ID;
-        public String name;
-
-        public double latitude;
-        public double longitude;
-
-        public int type;
-
-        List<Connection> connections;
-
-        public Station(String line_){
-
-            /* 
-            0 L'identifiant unique de l'arrêt
-            1 Le nom complet de l'arrêt entouré du caractère guillemet "
-            2 La description de l'arrêt (non utilisée)
-            3 La latitude de l'arrêt (en degrés)
-            4 La longitude de l'arrêt (en degrés)
-            5 L'identifiant de la zone (non utilisé)
-            6 L'url de l'arrêt (non utilisée)
-            7 Le type d'arrêt
-            8 La station parente (non utilisée)
-            */            
-
-            String[] line = ParseLine(line_).split(",");
-
-            ID = line[0];
-            name = line[1].replace("\"", "");
-
-            latitude = Double.parseDouble(line[3]);
-            longitude = Double.parseDouble(line[4]);
-
-            type = Integer.parseInt(line[7]);
-
-            connections = new ArrayList<Connection>();
+        public int get(int row, int column){            
+            return exploredGrid[row][column];
         }
 
-        public void Connect(Station station){
-            connections.add(new Connection(this, station));
+        public void set(int row, int column, int value){
+            exploredGrid[row][column] = value;
         }
 
         public void Print(){
-            System.err.printf("%s : name = %s / latitude = %s / longitude = %s / Type = %s / Connections = %s", ID, name, latitude, longitude, type, connections.size());
-        }
-    }
 
-    public static class Connection{
+            for(int i = 0; i < exploredGrid.length; i++){
 
-        Station stationTo;
-        Station stationFrom;
-        double distance;
+                for(int j = 0; j < exploredGrid[0].length; j++){
 
-        public Connection(Station stationFrom_, Station stationTo_){
+                    //System.err.print(exploredGrid[i][j]);
 
-            stationFrom = stationFrom_;
-            stationTo = stationTo_;
-
-            distance = GetDistance(stationFrom, stationTo);
-
-        }
-    }
-
-    public static class Path{
-
-        private List<String> IDList;
-        private List<String> nameList;
-        private List<Station> stations;
-
-        private Station startStation;
-        private Station endStation;
-
-        private double totalDist;
-
-        public Path(Station startStation_, Path path){
-
-            if(path == null){
-
-                IDList = new ArrayList<String>();
-                nameList = new ArrayList<String>();
-                stations = new ArrayList<Station>();
-    
-                IDList.add(startStation_.ID);
-                nameList.add(startStation_.name);
-                stations.add(startStation_);
-    
-                startStation = startStation_;
-                endStation = startStation_;
-    
-                totalDist = 0;
-            }else{
-
-                IDList = new ArrayList<String>(path.IDList);
-                nameList = new ArrayList<String>(path.nameList);
-                stations = new ArrayList<Station>(path.stations);                
-
-                startStation = path.startStation;
-                endStation = path.endStation;
-    
-                totalDist = path.totalDist;
+                    if(exploredGrid[i][j] == -1){
+                        System.err.print(".");
+                    }else if(exploredGrid[i][j] == myPlayerID){
+                        System.err.print("#");
+                        //System.err.printf("%s %s val = %s / myID = %s\n", i, j, exploredGrid[i][j], myPlayerID);
+                    }else{                        
+                        System.err.print(exploredGrid[i][j]);
+                    }   
+                }
+                System.err.print("\n");
             }
         }
-
-        private Path Add(Connection connection){
-
-            IDList.add(connection.stationTo.ID);
-            nameList.add(connection.stationTo.name);
-            stations.add(connection.stationTo);     
-            
-            totalDist += connection.distance;
-            endStation = connection.stationTo; 
-
-            return new Path(null, this);
-        }
-
-        public void Print(){
-            
-            for(Station station : stations){
-                System.err.println(station.name);
-            }
-        }
-    }    
-
-    //Running Sessions
-
-    static void OnlineParsing(){
-
-        ReadInputs(new Scanner(System.in));
-    }
-
-    static void LocalParsing(int validator){
-
-        try {
-
-            String validatorPath = "Validators\\TanNetwork\\Validator_" + validator + ".txt";
-
-            File myObj = new File(validatorPath);
-
-            Scanner in = new Scanner(myObj);
-
-            ReadInputs(in);            
-
-            in.close();
-        
-        }catch (FileNotFoundException e) {
-            
-            System.out.println("An error occurred.");
-            e.printStackTrace();
-        
-        }    
-    }
-
-    static void OnlineSession(){
-
-        OnlineParsing();
-
-        SubMain();
-
-        String finalAnswers = String.join("\n", answers.toArray(new String[0]));
-
-        System.out.println(finalAnswers);        
-    }
-
-    static void LocalSession(int number){
-
-        if(number == 0){
-
-            System.out.print("Validator to run ?  ");
-
-            number = new Scanner(System.in).nextInt();
-
-            System.out.print("\n");
-
-            if(number > 6 || number < 0) return;
-
-            if(number == 0){
-
-                for(int i = 1; i < 7; i++) RunLocal(i);
-
-            }else{
-
-                RunLocal(number);
-            }        
-
-            System.out.println(" ");
-            LocalSession(0);
-        
-        }else{
-            RunLocal(number);
-        }
-    }
-
-    static void RunLocal(int validator){
-
-        LocalParsing(validator);
-
-        System.err.println(" ");
-
-        try {
-
-            String answerPath = "Validators\\TanNetwork\\Answers_" + validator + ".txt";
-
-            File myObj = new File(answerPath);
-            Scanner in = new Scanner(myObj);
-
-            List<String> validatorAnswers = new ArrayList<String>();
-
-            while(in.hasNextLine()){
-                validatorAnswers.add(in.nextLine());
-            }
-
-            in.close();
-
-            SubMain();
-
-            boolean sameSize = validatorAnswers.size() == answers.size() ? true : false;
-
-            for(int i = 0; i < validatorAnswers.size(); i++){
-
-                String valAnswer = validatorAnswers.get(i);
-
-                String answer = i < answers.size() ? answers.get(i) : "Nothing";
-
-                String status = sameSize && valAnswer.equals(answer) ? "OK" : "NOK"; 
-
-                System.err.printf("%s : %s / %s\n", status, valAnswer, answer);
-            }            
-        
-        }catch (FileNotFoundException e) {
-            
-            System.out.println("An error occurred.");
-            e.printStackTrace();
-        
-        }    
-    }
-
-    static long GetValidator(int number){
-
-/*         switch (number){
-
-            case 1: return Validator_1();
-            case 2: return Validator_2();
-            case 3: return Validator_3();
-            case 4: return Validator_4();
-            case 5: return Validator_5();
-            case 6: return Validator_6();
-        } */
-
-        return -1;
     }
 }
