@@ -1,5 +1,4 @@
 import java.util.*;
-import java.util.stream.Stream;
 
 class Player {
 
@@ -25,13 +24,13 @@ class Player {
 
             if(!firstTurn) ReadInputs(in);
 
-            //grid.Print();
+            grid.Print();
 
             String bestDirection = "UP";
             int maxSurface = 0;
             int minOppDist = 20*30;
 
-            System.err.printf("myPosition = %s %s\n", lightCycles.get(myPlayerID).Y1, lightCycles.get(myPlayerID).X1);
+            //System.err.printf("myPosition = %s %s\n", lightCycles.get(myPlayerID).Y1, lightCycles.get(myPlayerID).X1);
 
             for(String direction : directions.keySet()){
 
@@ -40,24 +39,29 @@ class Player {
                 int nextRow = lightCycles.get(myPlayerID).Y1 + dirCoord[0];
                 int nextCol = lightCycles.get(myPlayerID).X1 + dirCoord[1];
 
-                String[][] gridTemp = grid.arrayGrid.clone();
-                //gridTemp[nextRow][nextCol] = Integer.toString(myPlayerID);
-                
                 int oppID = myPlayerID == 0 ? 1 : 0;
 
                 int surface = GetDiffusedSurface(nextRow, nextCol, grid.arrayGrid);
                 int oppDist = GetDistance(nextRow, nextCol, lightCycles.get(oppID).Y1, lightCycles.get(oppID).X1);
 
-                System.err.printf("%s : surface = %s\n", direction, surface);
+                boolean validPosition = IsPositionValid(nextRow, nextCol, grid.arrayGrid);
 
-                if(IsPositionValid(nextRow, nextCol, grid.arrayGrid) && (surface > maxSurface || (surface == maxSurface && oppDist < minOppDist))){
+                System.err.printf("%s : surface = %s / valid : %s\n", direction, surface, validPosition);
+
+                if(validPosition && (surface > maxSurface || (surface == maxSurface && oppDist < minOppDist))){
                     bestDirection = direction;
                     maxSurface = surface;
                     minOppDist = oppDist;
                 }
             }
 
+            int bestRow = lightCycles.get(myPlayerID).Y1 + directions.get(bestDirection)[0];
+            int bestCol = lightCycles.get(myPlayerID).X1 + directions.get(bestDirection)[1];
+
+            grid.set(bestRow, bestCol, Integer.toString(myPlayerID));
+
             System.out.println(bestDirection);
+
             firstTurn = false;
         }
     }
@@ -139,18 +143,22 @@ class Player {
         }
     }
 
-    static int GetDistance(int row1, int col1, int row2, int col2){
-        return Math.abs(row1-row2) + Math.abs(col1-col2);
-    }
-
     static void ReadInputs(Scanner in){
 
         nbOfPlayer = in.nextInt(); // total number of players (2 to 4).
         myPlayerID = in.nextInt(); // your player number (0 to 3).
 
+        System.err.printf("nbOfPlayer : %s / myPlayerID : %s\n", nbOfPlayer, myPlayerID);
+
         for(LightCycle lightCycle : lightCycles.values()){
-            lightCycle.Update(in);
+
+            lightCycle.Update(in);  
+            
         }
+    }    
+
+    static int GetDistance(int row1, int col1, int row2, int col2){
+        return Math.abs(row1-row2) + Math.abs(col1-col2);
     }
 
     public static class LightCycle{
@@ -161,13 +169,27 @@ class Player {
         private int X1;
         private int Y1;
 
-        private List<int[]> coords;
-        private boolean isDead;
+        private boolean erased;
 
+        private List<int[]> coords;
+        
         public LightCycle(int mID){            
             coords = new ArrayList<int[]>();
             ID = mID;
-            isDead = false;
+            erased = false;
+        }
+
+        public void Erase(){
+
+            //System.err.printf("Erasing player : %s / isDead = %s\n", ID, X0 == -1 && Y0 == -1 && X1 == -1 && Y1 == -1);
+
+            for(int[] coord : coords){
+                grid.set(coord[1], coord[0], ".");
+            }           
+        }
+
+        public boolean IsDead(){
+            return X0 == -1 && Y0 == -1 && X1 == -1 && Y1 == -1;
         }
 
         public void Update(Scanner in){
@@ -177,19 +199,15 @@ class Player {
             X1 = in.nextInt(); // starting X coordinate of lightcycle (can be the same as X0 if you play before this player)
             Y1 = in.nextInt(); // starting Y coordinate of lightcycle (can be the same as Y0 if you play before this player)
 
-            isDead = X0 == -1 && Y0 == -1 && X1 == -1 && Y1 == -1;
+            System.err.printf("%s : %s %s %s %s\n", ID, X0, Y0, X1, Y1);
 
-            if(isDead){
-
-                for(int[] coord : coords){
-                    grid.set(coord[1], coord[0], ".");
-                }
-
-            }else{
+            if(!IsDead()){
                 coords.add(new int[]{X1, Y1});
-                grid.set(Y1, X1, Integer.toString(myPlayerID));
+                grid.set(Y1, X1, Integer.toString(this.ID)); 
+            }else if(!erased){
+                Erase();
+                erased = true;
             }
-            
         }
     }
     
@@ -223,7 +241,7 @@ class Player {
                 for(int j = 0; j < arrayGrid[0].length; j++){
 
                     if(arrayGrid[i][j].equals(".")){
-
+/* 
                         int myDist = GetDistance(i, j, lightCycles.get(myPlayerID).Y1, lightCycles.get(myPlayerID).X1);
                         int minDist = 9999;
                         
@@ -232,10 +250,12 @@ class Player {
                                 minDist = Math.min(minDist, GetDistance(i, j, lightCycle.Y1, lightCycle.X1));                                
                             }
                         }
-                        System.err.print(myDist < minDist ? "." : (myDist == minDist ? "+" : "-"));
+                        System.err.print(myDist < minDist ? "." : (myDist == minDist ? "+" : "-")); */
+                        System.err.print(".");
                         
                     }else if(arrayGrid[i][j].equals(Integer.toString(myPlayerID))){
-                        System.err.print("#");
+                        //System.err.print("#");
+                        System.err.print(Integer.toString(myPlayerID));                        
                         //System.err.printf("%s %s val = %s / myID = %s\n", i, j, exploredGrid[i][j], myPlayerID);
                     }else{                        
                         System.err.print(arrayGrid[i][j]);
