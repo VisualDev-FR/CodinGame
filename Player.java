@@ -40,17 +40,20 @@ class Player {
                 int nextRow = myLightCycle.Y1 + dirCoord[0];
                 int nextCol = myLightCycle.X1 + dirCoord[1];
 
-                int surface = GetDiffusedSurface(nextRow, nextCol, grid.arrayGrid);
-                int oppDist = GetCloserOpponent(nextRow, nextCol);
-
                 boolean validPosition = IsPositionValid(nextRow, nextCol, grid.arrayGrid);
 
-                System.err.printf("%s : surface = %s / oppDist : %s\n", direction, surface, oppDist);
+                if(validPosition){
 
-                if(validPosition && (surface > maxSurface || (surface == maxSurface && oppDist < minOppDist))){
-                    bestDirection = direction;
-                    maxSurface = surface;
-                    minOppDist = oppDist;
+                    int surface = GetDiffusedSurface(nextRow, nextCol, grid.arrayGrid);
+                    int oppDist = GetCloserOpponent(nextRow, nextCol);
+
+                    System.err.printf("%s : surface = %s / oppDist : %s\n", direction, surface, oppDist);
+    
+                    if(surface > maxSurface || (surface == maxSurface && oppDist < minOppDist)){
+                        bestDirection = direction;
+                        maxSurface = surface;
+                        minOppDist = oppDist;
+                    }
                 }
             }
 
@@ -59,6 +62,83 @@ class Player {
             firstTurn = false;
         }
     }
+
+    // PATHFINDIND TESTS
+
+    static int GetMinPathLength(int startRow, int startCol, int destRow, int destCol, String[][] arrayGrid){
+
+        List<Border> borders = new ArrayList<Border>();
+        boolean[][] investigatePoints = new boolean[20][30];
+        Border bestBorder = null;
+        boolean pathFound = false;
+
+        borders.add(new Border(startRow, startCol));
+        investigatePoints[startRow][startCol] = true;
+
+        while(borders.size() > 0 && !pathFound){
+
+            //System.err.printf("borders : %s \n", borders.size());
+
+            List<Border> bordersTemp = new ArrayList<Border>(borders);
+
+            for(Border border : bordersTemp){
+
+                borders.remove(borders.indexOf(border));                
+
+                for(int[] direction : directions.values()){
+
+                    int nextRow = border.row + direction[0];
+                    int nextCol = border.col + direction[1];
+
+                    if(IsValidForPathFinding(nextRow, nextCol, arrayGrid)){
+
+                        if(!investigatePoints[nextRow][nextCol]){
+
+                            Border mNewBorder = new Border(nextRow, nextCol, border);
+
+                            if(nextRow == destRow && nextCol == destCol){
+                                System.err.println("PathFound !");
+                                pathFound = true;
+                                bestBorder = mNewBorder;
+                            }
+                            
+                            borders.add(mNewBorder);                            
+                        }
+
+                        investigatePoints[nextRow][nextCol] = true;
+                    }        
+                }
+            }
+        }        
+
+        return bestBorder != null ? bestBorder.TotalDist() : 9998;
+    }
+
+    public static class Border{
+
+        private List<Border> parentList;
+        private int row;
+        private int col;
+
+        public Border(int mRow, int mCol, Border mParent){
+            
+            row = mRow;
+            col = mCol;
+            parentList = new ArrayList<Border>(mParent.parentList);
+            parentList.add(mParent);
+                        
+        }
+
+        public Border(int mRow, int mCol){
+            parentList = new ArrayList<Border>();
+            row = mRow;
+            col = mCol;
+        }
+
+        public int TotalDist(){
+            return parentList.size();
+        }
+    }    
 
     // UTILITIES
 
@@ -69,8 +149,12 @@ class Player {
         for(LightCycle lightCycle : lightCycles.values()){
 
             if(lightCycle.ID != myPlayerID && !lightCycle.IsDead()){
-                int dist = GetDistance(row, col, lightCycle.Y1, lightCycle.X1);
-                minDist = Math.min(minDist, dist);
+
+                //System.err.printf("%s : %s %s %s %s\n", lightCycle.ID, row, col, lightCycle.Y1, lightCycle.X1);
+
+                int oppDist = GetMinPathLength(row, col, lightCycle.Y1, lightCycle.X1, grid.arrayGrid);
+
+                minDist = Math.min(minDist, oppDist);
             }
         }
 
@@ -118,6 +202,22 @@ class Player {
     static boolean IsPositionValid(int row, int col, String[][] arrayGrid){
 
         boolean isValid = false;
+
+        if(col >= 0 && col < 30 && row >=0 && row < 20){
+            isValid = arrayGrid[row][col].equals(".");
+        }
+        return isValid;
+    }
+    
+    static boolean IsValidForPathFinding(int row, int col, String[][] arrayGrid){
+
+        boolean isValid = false;
+
+        for(LightCycle lightCycle : lightCycles.values()){
+
+            if(lightCycle.ID != myPlayerID && row == lightCycle.Y1 && col == lightCycle.X1) return true;
+
+        }
 
         if(col >= 0 && col < 30 && row >=0 && row < 20){
             isValid = arrayGrid[row][col].equals(".");
@@ -203,7 +303,7 @@ class Player {
 
         public void Print(){
             for(int i = 0; i < arrayGrid.length; i++){
-                System.err.println(String.join(" ", arrayGrid[i]));
+                System.err.println(String.join("", arrayGrid[i]));
             }
         }
     }
