@@ -1,8 +1,9 @@
 import java.util.*;
-
-import javax.swing.text.Position;
+import java.util.stream.Stream;
 
 class Player {
+
+    static final int MINIMAX_DEPTH = 6;
 
     static int nbOfPlayer;
     static int myPlayerID;
@@ -64,8 +65,80 @@ class Player {
             firstTurn = false;
         }
     }
-/*
 
+    static List<Node> GetMiniMaxGraph(Node startNode, int depth){
+        
+        if(depth == 0 || !IsPositionValid(startNode.row, startNode.col, startNode.GetGrid())){
+
+            List<Node> finalNodes = new ArrayList<Node>();
+
+            for(int[] direction : directions.values()){
+
+                int nextRow = startNode.row + direction[0];
+                int nextCol = startNode.col + direction[1];
+
+                finalNodes.add(new Integer[]{nextRow, nextCol});
+            }
+
+            return finalNodes;
+
+        }else{
+
+            for(int[] direction : directions.values()){
+
+                int nextRow = lastRow + direction[0];
+                int nextCol = lastCol + direction[1];
+
+                return GetMiniMaxGraph(nextRow, nextCol, depth-1, isMyLight);
+            }
+        }
+
+        return null;
+    }
+
+    public static class Node{
+
+        private int row;
+        private int col;
+        private Node parent;        
+        private int playerID;
+        private int eval;
+
+        public Node(String direction, int mRow, int mCol, int mPlayerID, Node mParent){
+
+            row = mRow;
+            col = mCol;
+            parent = mParent;
+            playerID = mPlayerID;            
+        }
+
+        public void Evaluate(){
+
+            Grid gridTemp = GetGrid();
+
+            eval = GetDiffusedSurface(lightCycles.get(playerID), gridTemp);
+        }
+
+        public Grid GetGrid(){
+
+            Grid gridTemp = new Grid();
+            
+            gridTemp.exploredGrid = grid.exploredGrid.clone();
+            gridTemp.set(row, col, Integer.toString(this.playerID));
+
+            Node currentParent = this.parent;
+
+            while(currentParent != null){
+                
+                gridTemp.set(currentParent.row, currentParent.col, Integer.toString(currentParent.playerID));                
+                currentParent = currentParent.parent;
+            }
+
+            return gridTemp;
+        }
+    }    
+
+    /*
     //initial Call
 
     maxEval = +infinity
@@ -77,9 +150,11 @@ class Player {
 
     Play maxEval
 
-    static String MiniMax(int[] positionInMinimaxGraph, int depth, int maximizingPLayer, int alpha, int beta){
+
+
+    static String MiniMax(int[] position, int depth, int maximizingPLayer, int alpha, int beta){
  
-        if depth == 0 or gameOver in position{
+        if (depth == 0 or !IsPositionValid(position[0], position[1], mGrid)){
             return static evaluation of position
         }
 
@@ -115,8 +190,57 @@ class Player {
             Return minEval
         }
     }
+
 */
 
+    static int[] GetBestMove(){
+
+        List<String> paths = new ArrayList<String>();
+
+        paths.add("5:10");
+
+        GenerateGraph(paths, MINIMAX_DEPTH);
+
+        for(String entry : paths){
+            System.err.printf(" %s\n", entry);
+        }
+
+        System.err.printf("\nnbVal : %s\n", paths.size());
+        
+        return null;
+    }
+
+    static void GenerateGraph(List<String> paths, int depth){
+
+        if(depth > 0){
+
+            List<String> pathsTemp = new ArrayList<String>(paths);
+
+            for(String path : pathsTemp){
+
+                if(path.split(" ").length <= MINIMAX_DEPTH){
+                    
+                    paths.remove(path);
+
+                    String[] lastPosition = path.substring(path.lastIndexOf(" ") + 1).split(":");
+        
+                    for(int[] direction : directions.values()){
+        
+                        int nextRow = Integer.parseInt(lastPosition[0]) + direction[0];
+                        int nextCol = Integer.parseInt(lastPosition[1]) + direction[1];
+
+                        String newPosition = nextRow + ":" + nextCol;                    
+                        String newPath = path + " " + newPosition;
+        
+                        if(path.indexOf(newPosition) == -1){
+                            paths.add(newPath);                        
+                        }
+                    }
+                    GenerateGraph(paths, depth - 1); 
+                }          
+            }
+        }
+    }
     static int[] CountMaxReachablePositions(Grid mGrid){
 
         int[] reachablePositions = new int[nbOfPlayer];
