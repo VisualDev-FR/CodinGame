@@ -42,6 +42,10 @@ class Solution {
 
     static Border FindShortPath(Station startStation, Station endStation){
 
+        double minDist = Double.MAX_VALUE;
+
+        List<Border> bestBorders = new ArrayList<Border>();
+
         List<Border> borders = new ArrayList<Border>();
         borders.add(new Border(startStation));
 
@@ -49,9 +53,8 @@ class Solution {
         investigateStations.add(startStation.ID);
 
         Border bestBorder = null;
-        boolean pathFound = false;
 
-        while(borders.size()>0 && !pathFound){
+        while(borders.size()>0){
 
             List<Border> bordersTemp = new ArrayList<Border>(borders);
 
@@ -63,21 +66,34 @@ class Solution {
 
                     Station nextStation = connection.endStation;
 
-                    if(!investigateStations.contains(nextStation.ID)){
+                    if(!border.parentList.contains(nextStation.name) && border.totalDist < minDist){
 
                         Border mNewBorder = new Border(nextStation, border);
 
                         if(nextStation.ID.equals(endID)){
-                            pathFound = true;
-                            bestBorder = mNewBorder;
+                            bestBorders.add(mNewBorder);
+                            minDist = mNewBorder.totalDist;
                         }
-                        
+                            
                         borders.add(mNewBorder);                            
                     }
 
                     investigateStations.add(nextStation.ID);
                           
                 }
+            }
+        }
+
+        minDist = Double.MAX_VALUE;
+
+        System.err.printf("bestBorders : %s\n", bestBorders.size());
+
+        for(Border mBorder : bestBorders){
+
+            if(mBorder.totalDist < minDist){
+                
+                bestBorder = mBorder;
+                minDist = mBorder.totalDist;                
             }
         }
 
@@ -88,10 +104,13 @@ class Solution {
 
         private Station station;
         private List<String> parentList;
+        private double totalDist;
 
         public Border(Station mStation, Border mParent){
             
             station = mStation;
+
+            totalDist = mParent.totalDist + GetDistance(this.station, mParent.station);
 
             parentList = new ArrayList<String>(mParent.parentList);
             parentList.add(mParent.station.name);        
@@ -100,7 +119,7 @@ class Solution {
         public Border(Station mStation){
             
             station = mStation;
-
+            totalDist = 0;
             parentList = new ArrayList<String>();            
         }
     }    
