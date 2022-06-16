@@ -4,7 +4,7 @@ class Player {
 
     static Map<Integer, Application> applications;
     static Map<Integer, Team> teams;
-    static Map<String, Poste> postes;
+    static Map<String, CardCollection> collections;
 
     static int actualPoste;
 
@@ -16,11 +16,12 @@ class Player {
     static final int CONTINUOUS_INTEGRATION = 5;
     static final int CODE_REVIEW = 6;
     static final int REFACTORING = 7;
-    static final int BONUS = 8;
-    static final int DETTE_TECHNIQUE = 9;
+
+    static final int CARD_TYPE_COUNT = 8;
+    static final int DISPLAY_MARGIN = 15;
 
     public static void main(String args[]) {
-        
+
         Scanner in = new Scanner(System.in);
 
         int[] postesCounts = new int[8];
@@ -33,16 +34,15 @@ class Player {
 
             applications = new HashMap<Integer, Application>();
             teams = new HashMap<Integer, Team>();
-            postes = new HashMap<String, Poste>();
-            
-            String gamePhase = in.next(); // can be MOVE, GIVE_CARD, THROW_CARD, PLAY_CARD or RELEASE
-            
-            int applicationsCount = in.nextInt();
+            collections = new HashMap<String, CardCollection>();
 
             int[] neededPostes = new int[8];
             
-            
+            String gamePhase = in.next(); // can be MOVE, GIVE_CARD, THROW_CARD, PLAY_CARD or RELEASE           
+
+            int applicationsCount = in.nextInt();
             for (int i = 0; i < applicationsCount; i++) {
+                
                 String objectType = in.next();
 
                 Application mApplication = new Application(in);
@@ -51,7 +51,6 @@ class Player {
                     neededPostes[j] += mApplication.neededCards[j];
                 }
 
-                if(applications.containsKey(mApplication.id)) System.err.println("WARNING : Doublon sur les Applications !");
                 applications.put(mApplication.id, mApplication);
             }
 
@@ -64,18 +63,18 @@ class Player {
                 }
             }
 
-            System.err.println(Arrays.toString(neededPostes));
-            System.err.println(Arrays.toString(postesCounts));
-            
             int cardLocationsCount = in.nextInt();
             for (int i = 0; i < cardLocationsCount; i++) {
                 
                 String cardsLocation = in.next(); // the location of the card list. It can be HAND, DRAW, DISCARD or OPPONENT_CARDS (AUTOMATED and OPPONENT_AUTOMATED will appear in later leagues)
-                Poste mPoste = new Poste(in, cardsLocation);    
-
-                if(postes.containsKey(cardsLocation)) System.err.println("WARNING : Doublon sur les postes !");                
-                postes.put(cardsLocation, mPoste);
+                
+                CardCollection mCardCollection = new CardCollection(in, cardsLocation);    
+                
+                collections.put(cardsLocation, mCardCollection);
             }
+
+            PrintCollections();
+            PrintApplications();
 
             int possibleMovesCount = in.nextInt();
             if (in.hasNextLine()) {
@@ -89,8 +88,6 @@ class Player {
                 
                 String[] possibleMove = in.nextLine().split(" ");
 
-                System.err.println(String.join(" ", possibleMove));
-
                 String moveType = possibleMove[0];
                 Integer locationMove = 0;
 
@@ -100,11 +97,9 @@ class Player {
                     moves.add(locationMove);
                 }else if(moveType.equals("RELEASE")){
 
-                    int missingToRelease = applications.get(locationMove).CanBeReleased(postes.get("HAND"));
-                    
-                    System.err.printf("App %s : Missingto realease = %s\n", applications.get(locationMove).id, missingToRelease);
+                    int missingToRelease = applications.get(locationMove).GetMissingCardsForRelease(collections.get("HAND"));
 
-                    if(missingToRelease <= 2) appsReadyForRelease.put(locationMove, missingToRelease);
+                    appsReadyForRelease.put(locationMove, missingToRelease);
                     //releases.add(locationMove);
                 }
             }
@@ -130,26 +125,8 @@ class Player {
                 }
             }else{
 
-                int bestPosteID = -1;
-
-                if(bestPosteID == -1){
-
-                    int minNeededCard = 9999;
-
-                    for(int posteID : moves){
-                        
-                        if(postesCounts[posteID] > 0){
-
-                            for(Application app : applications.values()){
-
-                                if(app.neededCards[posteID] < minNeededCard){
-                                    minNeededCard = app.neededCards[posteID];
-                                    bestPosteID = posteID;
-                                }
-                            }
-                        }
-                    }
-                }
+                int bestPosteID = GetPosteWhereAppNeedMinCard(postesCounts, moves);  
+                //int bestPosteID = GetPosteWhereMaxAppsNeedCard(postesCounts, moves);                
 
                 System.err.printf("BestPoste : %s\n", bestPosteID);
 
@@ -158,6 +135,46 @@ class Player {
                 MOVE(bestPosteID);
             }
         }
+    }
+
+    public static int GetPosteWhereMaxAppsNeedCard(int[] postesCounts, List<Integer> moves){
+
+        int bestPosteID = -1;
+        int maxNeededCard = 0;
+
+        for(int posteID : moves){
+
+            if(postesCounts[posteID] > maxNeededCard){
+                maxNeededCard = postesCounts[posteID];
+                bestPosteID = posteID;
+            }            
+        }
+
+        return bestPosteID;
+
+    }
+
+    public static int GetPosteWhereAppNeedMinCard(int[] postesCounts, List<Integer> moves){
+
+        int bestPosteID = -1;
+        int minNeededCard = 9999;
+
+        for(int posteID : moves){
+            
+            if(postesCounts[posteID] > 0){
+
+                for(Application app : applications.values()){
+
+                    if(app.neededCards[posteID] < minNeededCard){
+                        minNeededCard = app.neededCards[posteID];
+                        bestPosteID = posteID;
+                    }
+                }
+            }
+        }
+
+        return bestPosteID;
+
     }
 
     public static int GetPosteWithMinCards(int[] tableOfCardsPerPoste, List<Integer> possibleMoves){
@@ -176,9 +193,9 @@ class Player {
         return bestPosteID;
     }
 
-    // CLASSES    
+    // CLASSES
 
-    public static class Poste{
+    public static class CardCollection{
 
         public String location;
         public int[] cards;
@@ -186,7 +203,7 @@ class Player {
         public int technicalDebtCardsCount;
 
 
-        public Poste(Scanner in, String mLocation){
+        public CardCollection(Scanner in, String mLocation){
 
             cards = new int[8];
 
@@ -198,8 +215,6 @@ class Player {
 
             bonusCardsCount = in.nextInt();
             technicalDebtCardsCount = in.nextInt();
-
-            Print();
         }
 
         public void Print(){
@@ -264,9 +279,6 @@ class Player {
                 neededCards[i] = in.nextInt();
                 totalNeededCards+=neededCards[i];
             }
-
-            Print();
-           
         }
 
         public void Print(){
@@ -284,18 +296,86 @@ class Player {
             System.err.println(" ");
         }
 
-        public int CanBeReleased(Poste mPoste){
+        public int GetMissingCardsForRelease(CardCollection mCollection){
 
             int missingToRelease = 0;
 
             for(int i = 0; i < neededCards.length; i++){
-                missingToRelease += Math.max(0, neededCards[i] - mPoste.cards[i]);
+                missingToRelease += Math.max(0, neededCards[i] - mCollection.cards[i]);
             }            
 
-            return missingToRelease - mPoste.bonusCardsCount;
+            return missingToRelease - mCollection.bonusCardsCount;
         }
     }
 
+    // DISPLAY FUNCTIONS
+
+    public static void PrintCollections(){
+
+        String[][] tableToPrint = new String[collections.size()][11];
+        int i = 0;
+
+        for(CardCollection mCollection : collections.values()){
+
+            tableToPrint[i][0]= PadString(mCollection.location, DISPLAY_MARGIN);
+
+            for(int j = 0; j < 8; j++){
+
+                tableToPrint[i][j+1] = PadInteger(mCollection.cards[j]);
+            }
+
+            tableToPrint[i][9] = PadInteger(mCollection.bonusCardsCount);
+            tableToPrint[i][10] = PadInteger(mCollection.technicalDebtCardsCount);
+
+            System.err.println(String.join(" ", tableToPrint[i]));
+            i++;
+        }
+
+        System.err.println(" ");
+    }
+
+    public static void PrintApplications(){
+
+        String[][] tableToPrint = new String[applications.size()][9];
+        int i = 0;
+
+        for(Application mApplication : applications.values()){
+
+            tableToPrint[i][0]= PadString("App " + mApplication.id, DISPLAY_MARGIN);
+
+            for(int j = 0; j < 8; j++){
+
+                tableToPrint[i][j+1] = PadInteger(mApplication.neededCards[j]);
+            }
+
+            System.err.println(String.join(" ", tableToPrint[i]));
+            i++;
+        }
+
+        System.err.println(" ");
+    }
+
+    public static String PadString(String mStr, int maxWidth){
+
+        if(mStr.length() >= maxWidth){
+            return mStr;
+        }else{
+
+            String[] padSpaces = new String[maxWidth - mStr.length()];
+            Arrays.fill(padSpaces, " ");
+
+            return mStr + String.join("", padSpaces);
+        }
+    }
+
+    public static String PadInteger(int mInt){
+        if(mInt != 0){
+            return String.format("%02d", mInt);
+        }else{
+            return "..";
+        }
+    } 
+    
     // ACTIONS FUNCTIONS
 
     public static void RELEASE(int appID){
@@ -309,6 +389,10 @@ class Player {
 
     public static void WAIT(){
         System.out.println("WAIT");
+    }
+
+    public static void RANDOM(){
+        System.out.println("RANDOM");
     }
 
 }
