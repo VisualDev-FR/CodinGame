@@ -7,6 +7,8 @@ class Player {
     static Map<String, CardCollection> collections;
 
     static int actualPoste;
+    static int[] remainingCards;
+    static String gamePhase;
 
     static final int TRAINING = 0;
     static final int CODING = 1;
@@ -24,57 +26,20 @@ class Player {
 
         Scanner in = new Scanner(System.in);
 
-        int[] postesCounts = new int[8];
-
-        Arrays.fill(postesCounts, 5);
-
-        actualPoste = -1;
+        PARSE_FIRST_TURN();
 
         while (true) {
 
             applications = new HashMap<Integer, Application>();
             teams = new HashMap<Integer, Team>();
             collections = new HashMap<String, CardCollection>();
+            gamePhase = in.next(); // can be MOVE, GIVE_CARD, THROW_CARD, PLAY_CARD or RELEASE           
 
-            int[] neededPostes = new int[8];
-            
-            String gamePhase = in.next(); // can be MOVE, GIVE_CARD, THROW_CARD, PLAY_CARD or RELEASE           
+            PARSE_APPLICATIONS(in);
+            PARSE_TEAMS(in);
+            PARSE_CARDS_COLLECTIONS(in);
 
-            int applicationsCount = in.nextInt();
-            for (int i = 0; i < applicationsCount; i++) {
-                
-                String objectType = in.next();
-
-                Application mApplication = new Application(in);
-
-                for(int j = 0; j < neededPostes.length; j++){
-                    neededPostes[j] += mApplication.neededCards[j];
-                }
-
-                applications.put(mApplication.id, mApplication);
-            }
-
-            for (int i = 0; i < 2; i++) {
-                Team mTeam = new Team(in, i);
-                teams.put(i, mTeam);
-
-                if(mTeam.location >= 0 && mTeam.location <= 7){
-                    if(postesCounts[mTeam.location] > 0) postesCounts[mTeam.location] -=1;
-                }
-            }
-
-            int cardLocationsCount = in.nextInt();
-            for (int i = 0; i < cardLocationsCount; i++) {
-                
-                String cardsLocation = in.next(); // the location of the card list. It can be HAND, DRAW, DISCARD or OPPONENT_CARDS (AUTOMATED and OPPONENT_AUTOMATED will appear in later leagues)
-                
-                CardCollection mCardCollection = new CardCollection(in, cardsLocation);    
-                
-                collections.put(cardsLocation, mCardCollection);
-            }
-
-            PrintCollections();
-            PrintApplications();
+            PRINT_GAME();
 
             int possibleMovesCount = in.nextInt();
             if (in.hasNextLine()) {
@@ -94,48 +59,87 @@ class Player {
                 if(possibleMove.length > 1) locationMove = Integer.parseInt(possibleMove[1]);
 
                 if (moveType.equals("MOVE")){
+                
                     moves.add(locationMove);
+                
                 }else if(moveType.equals("RELEASE")){
 
                     int missingToRelease = applications.get(locationMove).GetMissingCardsForRelease(collections.get("HAND"));
 
                     appsReadyForRelease.put(locationMove, missingToRelease);
-                    //releases.add(locationMove);
                 }
             }
 
             // In the first league: RANDOM | MOVE <zoneId> | RELEASE <applicationId> | WAIT; In later leagues: | GIVE <cardType> | THROW <cardType> | TRAINING | CODING | DAILY_ROUTINE | TASK_PRIORITIZATION <cardTypeToThrow> <cardTypeToTake> | ARCHITECTURE_STUDY | CONTINUOUS_DELIVERY <cardTypeToAutomate> | CODE_REVIEW | REFACTORING;
-            if(gamePhase.equals("RELEASE")){
-                
-                if (appsReadyForRelease.size()>0){
-
-                    int minMissingToRelease = 9999;
-                    int bestAppToRelease = -1;
-
-                    for(int appId : appsReadyForRelease.keySet()){
-
-                        if(appsReadyForRelease.get(appId) < minMissingToRelease){
-                            minMissingToRelease = appsReadyForRelease.get(appId);
-                            bestAppToRelease = appId;
-                        }
-                    }
-                    RELEASE(bestAppToRelease);
-                }else{
-                    WAIT();
-                }
-            }else{
-
-                int bestPosteID = GetPosteWhereAppNeedMinCard(postesCounts, moves);  
-                //int bestPosteID = GetPosteWhereMaxAppsNeedCard(postesCounts, moves);                
-
-                System.err.printf("BestPoste : %s\n", bestPosteID);
-
-                if(bestPosteID == -1) bestPosteID = GetPosteWithMinCards(postesCounts, moves);
-
-                MOVE(bestPosteID);
-            }
+            switch (gamePhase) {
+                case "MOVE":
+                    PHASE_MOVE(moves, remainingCards);
+                    break;
+                case "GIVE_CARD":
+                    PHASE_GIVE();
+                    break;
+                case "THROW_CARD":
+                    //will appear in Bronze League
+                    System.out.println("RANDOM");
+                    break;
+                case "PLAY_CARD":
+                    PHASE_PLAY();
+                    break;
+                case "RELEASE":
+                    PHASE_RELEASE(appsReadyForRelease);
+                    break;
+                default:
+                    System.out.println("RANDOM");
+                    break;
+            }            
         }
     }
+
+    //PHASE FUNCTIONS
+
+    public static void PHASE_GIVE(){
+        System.out.println("RANDOM");
+    }
+
+    public static void PHASE_PLAY(){
+        System.out.println("RANDOM");
+    }
+
+    public static void PHASE_RELEASE(Map<Integer, Integer> appsReadyForRelease){
+        
+        if (appsReadyForRelease.size()>0){
+
+            int minMissingToRelease = 9999;
+            int bestAppToRelease = -1;
+
+            for(int appId : appsReadyForRelease.keySet()){
+
+                if(appsReadyForRelease.get(appId) < minMissingToRelease){
+                    minMissingToRelease = appsReadyForRelease.get(appId);
+                    bestAppToRelease = appId;
+                }
+            }
+            RELEASE(bestAppToRelease);
+        }else{
+            WAIT();
+        }
+    }
+
+    public static void PHASE_MOVE(List<Integer> moves, int[] cardsByZone){
+
+        if(moves.size() > 0){
+            int bestPosteID = GetPosteWhereAppNeedMinCard(cardsByZone, moves);  
+            //int bestPosteID = GetPosteWhereMaxAppsNeedCard(postesCounts, moves);                
+
+            if(bestPosteID == -1) bestPosteID = GetPosteWithMinCards(cardsByZone, moves);
+
+            MOVE(bestPosteID);
+        }else{
+            WAIT();
+        }
+    }
+    
+    // EVALUATION FUNCTIONS
 
     public static int GetPosteWhereMaxAppsNeedCard(int[] postesCounts, List<Integer> moves){
 
@@ -192,7 +196,7 @@ class Player {
 
         return bestPosteID;
     }
-
+    
     // CLASSES
 
     public static class CardCollection{
@@ -308,7 +312,27 @@ class Player {
         }
     }
 
-    // DISPLAY FUNCTIONS
+    // PRINTING FUNCTIONS
+
+    public static void PRINT_GAME(){
+        PrintCollections();
+        PrintRemainingCards();
+        PrintApplications();        
+    }
+
+    public static void PrintRemainingCards(){
+
+        String[] tableToPrint = new String[CARD_TYPE_COUNT + 1];
+
+        tableToPrint[0] = PadString("Cards Left", DISPLAY_MARGIN);
+
+        for(int i = 0; i < remainingCards.length; i++){
+
+            tableToPrint[i + 1] = PadInteger(remainingCards[i]);            
+        }
+
+        System.err.println(String.join(" ", tableToPrint) + "\n");
+    }
 
     public static void PrintCollections(){
 
@@ -376,6 +400,55 @@ class Player {
         }
     } 
     
+    // PARSING FUNCTIONS
+
+    public static void PARSE_CARDS_COLLECTIONS(Scanner in){
+        
+        int cardLocationsCount = in.nextInt();
+        for (int i = 0; i < cardLocationsCount; i++) {
+            
+            String cardsLocation = in.next(); // the location of the card list. It can be HAND, DRAW, DISCARD or OPPONENT_CARDS (AUTOMATED and OPPONENT_AUTOMATED will appear in later leagues)
+            
+            CardCollection mCardCollection = new CardCollection(in, cardsLocation);    
+            
+            collections.put(cardsLocation, mCardCollection);
+        }
+    }
+
+    public static void PARSE_FIRST_TURN(){
+        remainingCards = new int[8];
+        Arrays.fill(remainingCards, 5);
+        actualPoste = -1;
+    }
+
+    public static void PARSE_TEAMS(Scanner in){
+        
+        for (int i = 0; i < 2; i++) {
+            
+            Team mTeam = new Team(in, i);
+            teams.put(i, mTeam);
+
+            if(mTeam.location >= 0 && mTeam.location <= 7){
+                if(remainingCards[mTeam.location] > 0) remainingCards[mTeam.location] -=1;
+            }
+        }        
+    }
+
+    public static void PARSE_APPLICATIONS(Scanner in){
+        
+        int applicationsCount = in.nextInt();
+        
+        for (int i = 0; i < applicationsCount; i++) {
+            
+            String objectType = in.next();
+
+            Application mApplication = new Application(in);
+
+            applications.put(mApplication.id, mApplication);
+        }        
+    }
+
+
     // ACTIONS FUNCTIONS
 
     public static void RELEASE(int appID){
