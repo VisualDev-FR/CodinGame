@@ -22,7 +22,7 @@ class Player {
     static final int TECHNICAL_DEBT = 9;
 
     static final int CARD_TYPE_COUNT = 8;
-    static final int DISPLAY_MARGIN = 15;
+    static final int DISPLAY_MARGIN = 7;
 
     public static void main(String args[]) throws Exception {
 
@@ -88,8 +88,7 @@ class Player {
                     PHASE_GIVE(possibleMoves);
                     break;
                 case "THROW_CARD":
-                    //will appear in Bronze League
-                    System.out.println("RANDOM");
+                    PHASE_THROW();
                     break;
                 case "PLAY_CARD":
                     PHASE_PLAY(possibleMoves);
@@ -98,7 +97,7 @@ class Player {
                     PHASE_RELEASE(appsReadyForRelease);
                     break;
                 default:
-                    System.out.println("RANDOM");
+                    RANDOM();
                     break;
             }            
         }
@@ -106,16 +105,20 @@ class Player {
 
     //PHASE FUNCTIONS
 
+    public static void PHASE_THROW(){
+        RANDOM();
+    }
+
     public static void PHASE_GIVE(List<String> possibleMoves) throws Exception{
 
+        /* Logique de choix des cartes à donner :
 
-        /* 
-         Si je donne une carte, je donne celle qui me permet d'obtenir une application avec le moins de cartes manquantes
+            Si je donne une carte, je donne celle qui me permet d'obtenir une application avec le moins de cartes manquantes
 
-         for each card in myHand
+            for each card in myHand
             for each app in applications
                 minMissingCard = GetMissingCard(main avec la carte en moins)
-         */
+        */
 
         int minMissingCard = 9999;
         int bestCardID = -1;
@@ -163,15 +166,28 @@ class Player {
                 case "TRAINING":
                     eval = 24 * collections.get("HAND").cards[TECHNICAL_DEBT];
                     break;
+                case "CODING":
+                    eval = 0;
+                    break;
+                case "DAILY_ROUTINE":
+                    eval = 0;
+                    break;
+                case "TASK_PRIORITIZATION":
+                    eval = 0;
+                    break;                                                            
                 case "ARCHITECTURE_STUDY":
                     eval = 24 * teams.get(0).score;
                     break;
+                case "CONTINUOUS_INTEGRATION":
+                    eval = 0;
+                    break;                    
                 case "CODE_REVIEW":
                     eval = 95;
                     break;
                 case "REFACTORING":
                     eval = 100 * collections.get("HAND").cards[TECHNICAL_DEBT];
-                    break;                
+                    break;
+
             }
 
             movesToEval.put(move, eval);
@@ -379,16 +395,31 @@ class Player {
     // PRINTING FUNCTIONS
 
     public static void PRINT_GAME(){
+        PrintHeaders();
         PrintCollections();
         PrintRemainingCards();
         PrintApplications();        
+    }
+
+    public static void PrintHeaders(){
+        
+        String[] tableToPrint = new String[CARD_TYPE_COUNT + 1];
+
+        tableToPrint[0] = PadString("Zones", DISPLAY_MARGIN);
+
+        for(int i = 0; i < remainingCards.length; i++){
+
+            tableToPrint[i + 1] = String.format("%02d", i);
+        }
+
+        System.err.println(String.join(" ", tableToPrint) + "\n");        
     }
 
     public static void PrintRemainingCards(){
 
         String[] tableToPrint = new String[CARD_TYPE_COUNT + 1];
 
-        tableToPrint[0] = PadString("Cards Left", DISPLAY_MARGIN);
+        tableToPrint[0] = PadString("CRD LFT", DISPLAY_MARGIN);
 
         for(int i = 0; i < remainingCards.length; i++){
 
@@ -405,7 +436,7 @@ class Player {
 
         for(CardCollection mCollection : collections.values()){
 
-            tableToPrint[i][0]= PadString(mCollection.location, DISPLAY_MARGIN);
+            tableToPrint[i][0]= PadString(ParseLocation(mCollection.location), DISPLAY_MARGIN);
 
             for(int j = 0; j < mCollection.cards.length; j++){
 
@@ -417,6 +448,18 @@ class Player {
         }
 
         System.err.println(" ");
+    }
+
+    public static String ParseLocation(String mLocation){
+
+        switch(mLocation){
+            case"OPPONENT_AUTOMATED":   return "O_AT";
+            case"DRAW":                 return "DRAW";
+            case"DISCARD":              return "DISC";
+            case"HAND":                 return "HAND";
+            case"OPPONENT_CARDS":       return "O_CD";
+            default:                    return"";
+        }
     }
 
     public static void PrintApplications(){
