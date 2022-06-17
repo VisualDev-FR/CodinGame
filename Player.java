@@ -1,11 +1,10 @@
-import java.nio.MappedByteBuffer;
 import java.util.*;
 
 class Player {
 
     static Team myTeam;
     static Team oppTeam;    
-
+    static Map<String, Integer> movesToEval;
     static Map<Integer, Application> applications;
     static Map<String, CardCollection> collections;
     static List<String> possibleMoves;
@@ -38,6 +37,7 @@ class Player {
 
             gamePhase = in.next(); // can be MOVE, GIVE_CARD, THROW_CARD, PLAY_CARD or RELEASE
 
+            movesToEval = new HashMap<String, Integer>();
             applications = new HashMap<Integer, Application>();
             collections = new HashMap<String, CardCollection>();
             possibleMoves = new ArrayList<String>();
@@ -77,40 +77,60 @@ class Player {
     public static class CardCollection{
 
         public String location;
+        public int totalCards;
         public int[] cards;
-        public List<Integer> cardsID;
+        public int[] proportions;
 
         public CardCollection(CardCollection mCollection){
 
             location = mCollection.location;
             cards = mCollection.cards.clone();
-            cardsID = new ArrayList<Integer>(mCollection.cardsID);
+            proportions = mCollection.proportions.clone();
         }
 
         public CardCollection(Scanner in, String mLocation){
-
-            cardsID = new ArrayList<Integer>();
+            
+            proportions = new int[CARD_TYPE_COUNT + 2];
             cards = new int[CARD_TYPE_COUNT + 2];
             location = mLocation;
 
             for(int i = 0; i < cards.length; i++){
                 cards[i] = in.nextInt();
-                if(cards[i] > 0) cardsID.add(i);
+                totalCards += cards[i];
             }
+
+            ResetProportions();
         }
+
+        private void ResetProportions(){
+            
+            for(int i = 0; i < proportions.length; i++){
+                
+                if(totalCards > 0){
+                    proportions[i] = 100 * cards[i] / totalCards;
+                }else{
+                    proportions[i] = 0;
+                } 
+            }
+        }        
 
         public void RemoveCard(int cardID) throws Exception{
 
-            if(cards[cardID] <= 0){
+            if(cards[cardID] > 0){
+                cards[cardID] = Math.max(0, cards[cardID] - 1);
+                totalCards --;
+                ResetProportions();
+                
+            }else{
                 cards = new int[0];
                 throw new Exception("Le nombre de cartes est déjà nul !");                
-            }else{
-                cards[cardID] = Math.max(0, cards[cardID] - 1);
             }            
         }
         
         public void AddCard(int cardID){
             cards[cardID] += 1;
+            totalCards++;
+            ResetProportions();
         }
 
         public int CardCount(int cardID){
@@ -217,6 +237,8 @@ class Player {
 
         for(String move : possibleMoves){ 
 
+            movesToEval.put(move, -1);
+
             String moveType = move.split(" ")[0];
 
             if(moveType.equals("GIVE")){
@@ -230,7 +252,7 @@ class Player {
                     handTemp.RemoveCard(cardID); //S'il ne s'agit pas d'une carte bonus ou dette, on retire la carte courante de la main virtuelle que l'on vient de créer
     
                     int missingCard = mApp.GetMissingCardsForRelease(handTemp); //On stocke le nombre de carte manquantes pour construire l'appli courante, et on la compare au nombre mini de cartes manquantes pour chaque appli
-    
+                    
                     if(missingCard < minMissingCard){
                         minMissingCard = missingCard;
                         bestCardID = cardID;
@@ -246,11 +268,13 @@ class Player {
         }
     }
 
-    public static void PHASE_PLAY(){
+    public static void PHASE_PLAY() throws Exception{
 
         //TODO: Finir l'evaulation de toute les possibilités de jeu
 
-        Map<String, Integer> movesToEval = new HashMap<String, Integer>();
+        // 1) si je suis en mesure de release une appli, j'envoi un WAIT ici
+
+        Map<String, Integer> moves = new HashMap<String, Integer>();
         
         for(String move : possibleMoves){
 
@@ -258,41 +282,41 @@ class Player {
 
             switch(move.split(" ")[0]){
                 case "TRAINING":
-                    eval = 24 * collections.get("HAND").cards[TECHNICAL_DEBT];
+                    eval = EVAL_TRAINING(move);
                     break;
                 case "CODING":
-                    eval = 1;
+                    eval = EVAL_CODING(move);
                     break;
                 case "DAILY_ROUTINE":
-                    eval = 9999;
+                    eval = EVAL_DAILY_ROUTINE(move);
                     break;
                 case "TASK_PRIORITIZATION":
                     eval = EVAL_TASK_PRIORITIZATION(move);
                     break;                                                            
                 case "ARCHITECTURE_STUDY":
-                    eval = 24 * myTeam.score;
+                    eval = EVAL_ARCHITECTURE_STUDY(move);
                     break;
                 case "CONTINUOUS_INTEGRATION":
                     eval = EVAL_CONTINUOUS_INTEGRATION(move);
                     break;                    
                 case "CODE_REVIEW":
-                    eval = 95;
+                    eval = EVAL_CODE_REVIEW(move);
                     break;
                 case "REFACTORING":
-                    eval = 100 * collections.get("HAND").cards[TECHNICAL_DEBT];
+                    eval = EVAL_REFACTORING(move);
                     break;
 
             }
 
-            movesToEval.put(move, eval);
+            moves.put(move, eval);
         }
 
         int maxEval = 0;
         String bestMove="";
 
-        for(String move : movesToEval.keySet()){
-            if(movesToEval.get(move) > maxEval){
-                maxEval = movesToEval.get(move);
+        for(String move : moves.keySet()){
+            if(moves.get(move) > maxEval){
+                maxEval = moves.get(move);
                 bestMove = move;
             }
         }
@@ -315,8 +339,9 @@ class Player {
                 int locationMove = Integer.parseInt(move.split(" ")[1]);
                 int missingToRelease = applications.get(locationMove).GetMissingCardsForRelease(collections.get("HAND"));
 
-                if(missingToRelease == 0 || oppTeam.score > myTeam.score || myTeam.score == 4) appsReadyForRelease.put(locationMove, missingToRelease);
-                //appsReadyForRelease.put(locationMove, missingToRelease);
+                //if(missingToRelease < 3 || myTeam.score == 4) appsReadyForRelease.put(locationMove, missingToRelease);
+                //if(missingToRelease == 0 || oppTeam.score > myTeam.score || myTeam.score == 4) appsReadyForRelease.put(locationMove, missingToRelease);
+                appsReadyForRelease.put(locationMove, missingToRelease);
             }
         }
 
@@ -351,7 +376,7 @@ class Player {
 
                 moves.put(move, eval);
 
-                System.err.printf("%s : %s\n", PadString(move, 8), eval);
+                //System.err.printf("%s : %s\n", PadString(move, 8), eval);
             }
         }
 
@@ -377,9 +402,44 @@ class Player {
     
     // EVALUATION FUNCTIONS
 
-    public static int EVAL_CODE_REVIEW(String move){
+    public static int EVAL_TRAINING(String move){
+        int eval = 24 * collections.get("HAND").cards[TECHNICAL_DEBT];
+        movesToEval.put(move, eval);
+        return eval;
+    }
 
-        return 95;
+    public static int EVAL_CODING(String move){
+        int eval = 24 * collections.get("HAND").cards[TECHNICAL_DEBT];
+        movesToEval.put(move, eval);
+        return eval;        
+    }
+
+    public static int EVAL_CODING_NEW(String move){ //TODO: Implémenter cette version, voir si elle est pertinente par rapport à l'eval actuelle
+
+        // on renvoi un entier qui correspond à 1000 divisé par le taux de carte dette qu'on a dans notre pioche
+        // => 10% de dette : 1000 / 10 = 100
+        // => 20% de dette : 1000 / 20 = 50
+        // => 50% de dette : 1000 / 50 = 20
+        // => 80% de dette : 1000 / 80 = 13
+        
+        int eval = 1;
+
+        if(collections.containsKey("DRAW")){
+            
+            int technicalProportion = collections.get("DRAW").proportions[TECHNICAL_DEBT];
+            
+            eval = technicalProportion > 0 ? 1000 / technicalProportion : 1000;
+        }
+
+        movesToEval.put(move, eval);
+
+        return eval;
+    }
+
+    public static int EVAL_DAILY_ROUTINE(String move){
+        int eval = 9999;
+        movesToEval.put(move, eval);
+        return eval;
     }
 
     public static int EVAL_MOVE(String move){
@@ -414,19 +474,87 @@ class Player {
             minEval = Math.min(minEval, eval);
         }        
 
+        movesToEval.put(move, minEval);
+
         return minEval;
     }
 
     public static int EVAL_CONTINUOUS_INTEGRATION(String move){
-
-        return 1;
+        int eval = 1;
+        movesToEval.put(move, eval);
+        return eval;
     }
     
-    public static int EVAL_TASK_PRIORITIZATION(String move){
+    public static int EVAL_TASK_PRIORITIZATION(String move) throws Exception{
 
-        return 0;
+        // 1) on calcul le nombre mini de cartes necessaires pour chaque appli avec notre main actuelle, puis on stocke le mini
+        // 2) on fait de meme avec une CollectionCard virtuelle, basée sur la nouvelle main faisant suite à l'échange en cours d'évaluation
+
+        int minCardsWithMyHand = 9999;
+        int minCardsWithNewHand = 9999;
+
+        String[] tMove = move.split(" ");
+
+        int cardToThrow = Integer.parseInt(tMove[1]);
+        int cardToTake = Integer.parseInt(tMove[2]);
+
+        if (cardToThrow == 5) return -9999; //TODO: find the problem with the fucking card N°5
+
+        CardCollection handTemp = new CardCollection(collections.get("HAND"));
+
+        handTemp.RemoveCard(cardToThrow);
+        handTemp.AddCard(cardToTake);
+
+        for(Application mApp : applications.values()){
+
+            int missingWithNewHand = mApp.GetMissingCardsForRelease(handTemp);
+            int missingWithMyHand = mApp.GetMissingCardsForRelease(collections.get("HAND"));
+
+            minCardsWithNewHand = Math.min(minCardsWithNewHand, missingWithNewHand);
+            minCardsWithMyHand = Math.min(minCardsWithMyHand, missingWithMyHand);
+        }
+        
+        // 3) on renvoi un entier en fonction de la différence entre les deux valeurs mini trouvées
+
+        int absDifference = Math.abs(minCardsWithMyHand - minCardsWithNewHand);
+        int eval = 0;
+        
+        if(absDifference > 0){
+            
+            if(minCardsWithNewHand > 0){
+                int coef_sign = (minCardsWithMyHand - minCardsWithNewHand) / Math.abs(minCardsWithMyHand - minCardsWithNewHand);
+                
+                eval = coef_sign * 100 / minCardsWithNewHand;
+            }else{
+                eval = 100;
+            }
+        }else{
+            eval = 1;
+        }
+
+        movesToEval.put(move, eval);
+
+        return eval;
     }
     
+    public static int EVAL_ARCHITECTURE_STUDY(String move){
+        int eval = 24 * myTeam.score;
+        movesToEval.put(move, eval);
+        return eval;
+    }
+
+    public static int EVAL_CODE_REVIEW(String move){
+        int eval = 50;
+        movesToEval.put(move, eval);
+        return eval;
+    }
+
+    public static int EVAL_REFACTORING(String move){
+        int eval = 100 * collections.get("HAND").cards[TECHNICAL_DEBT];
+        movesToEval.put(move, eval);
+        return eval;
+    }
+
     // PRINTING FUNCTIONS
 
     public static void PRINT_GAME(){
@@ -451,16 +579,35 @@ class Player {
         System.err.println(String.join(" ", tableToPrint) + "\n");        
     }
 
-    public static void PrintPossibleMoves(){
+    public static void PrintPossibleMoves(){ //TODO: voir pourquoi les possibleMoves ne s'affichent pas
 
         System.err.println("PHASE = " + gamePhase + "\n");
 
-        for(String move : possibleMoves){
-            System.err.println(move);
+        String[][] tableToPrint = new String[movesToEval.size()][2];
+        int i = 0;
+
+        for(String move : movesToEval.keySet()){
+            tableToPrint[i][0] = PadString(move, 25);
+            tableToPrint[i][1] = PadInteger(movesToEval.get(move), 2,true);
+
+            System.err.println(String.join(" ", tableToPrint[i]));
+            i++;
         }
 
         System.err.println(" ");
     }
+
+    public static void PrintPossibleMoves_OLD(){
+
+        System.err.println("PHASE = " + gamePhase + "\n");
+
+        for(String move : possibleMoves){
+
+            System.err.println(move);
+        }
+
+        System.err.println(" ");
+    }    
 
     public static void PrintRemainingCards(){
 
@@ -470,7 +617,7 @@ class Player {
 
         for(int i = 0; i < remainingCards.length; i++){
 
-            tableToPrint[i + 1] = PadInteger(remainingCards[i]);            
+            tableToPrint[i + 1] = PadInteger(remainingCards[i], 2,true);            
         }
 
         System.err.println(String.join(" ", tableToPrint) + "\n");
@@ -487,7 +634,7 @@ class Player {
 
             for(int j = 0; j < mCollection.cards.length; j++){
 
-                tableToPrint[i][j+1] = PadInteger(mCollection.cards[j]);
+                tableToPrint[i][j+1] = PadInteger(mCollection.cards[j], 2,true);
             }
 
             System.err.println(String.join(" ", tableToPrint[i]));
@@ -521,7 +668,7 @@ class Player {
 
             for(int j = 0; j < 8; j++){
 
-                tableToPrint[i][j+1] = PadInteger(mApplication.neededCards[j]);
+                tableToPrint[i][j+1] = PadInteger(mApplication.neededCards[j], 2, true);
             }
 
             System.err.println(String.join(" ", tableToPrint[i]));
@@ -540,7 +687,7 @@ class Player {
 
                 int missingCard = Math.max(0, mApplication.neededCards[j] - collections.get("HAND").cards[j] * 2);
 
-                tableToPrint[i][j+1] = PadInteger(missingCard);
+                tableToPrint[i][j+1] = PadInteger(missingCard, 2 ,true);
             }
 
             System.err.println(String.join(" ", tableToPrint[i]));
@@ -563,11 +710,40 @@ class Player {
         }
     }
 
-    public static String PadInteger(int mInt){
-        if(mInt != 0){
-            return String.format("%02d", mInt);
+    public static String PadInteger(int mInt, int maxWidth, boolean zerosToPoints){
+
+        String mStr = Integer.toString(mInt);
+
+        if(mStr.length() >= maxWidth){
+            
+            return mStr;
+
         }else{
-            return "..";
+
+            if(mInt > 0){
+
+                String[] padSpaces = new String[maxWidth - mStr.length()];
+                Arrays.fill(padSpaces, "0");
+    
+                return String.join("", padSpaces) + mStr;
+
+            }else if(mInt < 0){
+
+                int posInt = -mInt;
+                mStr = Integer.toString(posInt);
+
+                String[] padSpaces = new String[maxWidth - mStr.length()-1];
+                Arrays.fill(padSpaces, "0");
+    
+                return "-" + String.join("", padSpaces) + mStr;    
+
+            }else{
+
+                String[] padSpaces = new String[maxWidth];
+                Arrays.fill(padSpaces, zerosToPoints ? "." : "0");
+    
+                return String.join("", padSpaces);
+            }
         }
     } 
     
