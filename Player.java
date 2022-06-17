@@ -3,8 +3,11 @@ import java.util.*;
 class Player {
 
     static Map<Integer, Application> applications;
-    static Map<Integer, Team> teams;
     static Map<String, CardCollection> collections;
+    static List<String> possibleMoves;
+
+    static Team myTeam;
+    static Team oppTeam;
 
     static int actualPoste;
     static int[] remainingCards;
@@ -33,68 +36,33 @@ class Player {
         while (true) {
 
             applications = new HashMap<Integer, Application>();
-            teams = new HashMap<Integer, Team>();
             collections = new HashMap<String, CardCollection>();
             gamePhase = in.next(); // can be MOVE, GIVE_CARD, THROW_CARD, PLAY_CARD or RELEASE
-
-            System.err.println(gamePhase + "\n");
 
             PARSE_APPLICATIONS(in);
             PARSE_TEAMS(in);
             PARSE_CARDS_COLLECTIONS(in);
 
-            int possibleMovesCount = in.nextInt();
-            if (in.hasNextLine()) {
-                in.nextLine();
-            }
-
-            List<Integer> moves = new ArrayList<Integer>();
-            Map<Integer, Integer> appsReadyForRelease = new HashMap<Integer, Integer>();
-            List<String> possibleMoves = new ArrayList<String>();
-            
-            for (int i = 0; i < possibleMovesCount; i++) {
-                
-                String[] possibleMove = in.nextLine().split(" ");
-
-                possibleMoves.add(String.join(" ", possibleMove));
-
-                System.err.println(String.join(" ", possibleMove));
-
-                String moveType = possibleMove[0];
-                Integer locationMove = 0;
-
-                if(possibleMove.length > 1) locationMove = Integer.parseInt(possibleMove[1]);
-
-                if (moveType.equals("MOVE")){
-                
-                    moves.add(locationMove);
-                
-                }else if(moveType.equals("RELEASE")){
-
-                    int missingToRelease = applications.get(locationMove).GetMissingCardsForRelease(collections.get("HAND"));
-
-                    appsReadyForRelease.put(locationMove, missingToRelease);
-                }
-            }
-
             PRINT_GAME();
+
+            PARSE_POSSIBLE_MOVES(in);
 
             // In the first league: RANDOM | MOVE <zoneId> | RELEASE <applicationId> | WAIT; In later leagues: | GIVE <cardType> | THROW <cardType> | TRAINING | CODING | DAILY_ROUTINE | TASK_PRIORITIZATION <cardTypeToThrow> <cardTypeToTake> | ARCHITECTURE_STUDY | CONTINUOUS_DELIVERY <cardTypeToAutomate> | CODE_REVIEW | REFACTORING;
             switch (gamePhase) {
                 case "MOVE":
-                    PHASE_MOVE(moves, remainingCards);
+                    PHASE_MOVE();
                     break;
                 case "GIVE_CARD":
-                    PHASE_GIVE(possibleMoves);
+                    PHASE_GIVE();
                     break;
                 case "THROW_CARD":
                     PHASE_THROW();
                     break;
                 case "PLAY_CARD":
-                    PHASE_PLAY(possibleMoves);
+                    PHASE_PLAY();
                     break;
                 case "RELEASE":
-                    PHASE_RELEASE(appsReadyForRelease);
+                    PHASE_RELEASE();
                     break;
                 default:
                     RANDOM();
@@ -105,11 +73,40 @@ class Player {
 
     //PHASE FUNCTIONS
 
-    public static void PHASE_THROW(){
-        RANDOM();
+    public static void PHASE_THROW() throws Exception{
+        
+        /* Logique de choix des cartes à jeter :
+
+            Je priorise les bonus, car quand on sera en galère j'en aurai beaucoup en main
+
+            Si je n'ai pas de bonus dans ma main, je donne celle qui me permet d'obtenir une application avec le moins de cartes manquantes
+
+        */
+
+        int minMissingCard = 9999;
+        int bestCardID = -1;
+
+        int bonusCards = collections.get("HAND").cards[8];
+
+        if (bonusCards > 0){
+
+            bestCardID = 8;
+        
+        }else{
+
+            // TODO: Choisir la carte qui nous avantage le plus
+        }
+
+        
+        
+        if(bestCardID > -1){
+            THROW(bestCardID);
+        }else{
+            RANDOM();
+        }
     }
 
-    public static void PHASE_GIVE(List<String> possibleMoves) throws Exception{
+    public static void PHASE_GIVE() throws Exception{
 
         /* Logique de choix des cartes à donner :
 
@@ -154,7 +151,7 @@ class Player {
         }
     }
 
-    public static void PHASE_PLAY(List<String> possibleMoves){
+    public static void PHASE_PLAY(){
 
         Map<String, Integer> movesToEval = new HashMap<String, Integer>();
         
@@ -173,10 +170,10 @@ class Player {
                     eval = 0;
                     break;
                 case "TASK_PRIORITIZATION":
-                    eval = 0;
+                    eval = 24 * myTeam.score;
                     break;                                                            
                 case "ARCHITECTURE_STUDY":
-                    eval = 24 * teams.get(0).score;
+                    eval = 24 * myTeam.score;
                     break;
                 case "CONTINUOUS_INTEGRATION":
                     eval = 0;
@@ -210,8 +207,21 @@ class Player {
         } 
     }
 
-    public static void PHASE_RELEASE(Map<Integer, Integer> appsReadyForRelease){
-        
+    public static void PHASE_RELEASE(){
+
+        Map<Integer, Integer> appsReadyForRelease = new HashMap<Integer, Integer>();
+
+        for(String move : possibleMoves){
+
+            if(move.split(" ")[0].equals("RELEASE")){
+
+                int locationMove = Integer.parseInt(move.split(" ")[1]);
+                int missingToRelease = applications.get(locationMove).GetMissingCardsForRelease(collections.get("HAND"));
+
+                if(missingToRelease == 0 || oppTeam.score > myTeam.score) appsReadyForRelease.put(locationMove, missingToRelease);
+            }
+        }
+
         if (appsReadyForRelease.size()>0){
 
             int minMissingToRelease = 9999;
@@ -224,19 +234,31 @@ class Player {
                     bestAppToRelease = appId;
                 }
             }
+            
             RELEASE(bestAppToRelease);
         }else{
             WAIT();
         }
     }
 
-    public static void PHASE_MOVE(List<Integer> moves, int[] cardsByZone){
+    public static void PHASE_MOVE(){
+
+        List<Integer> moves = new ArrayList<Integer>();
+
+        for(String move : possibleMoves){
+
+            if(move.split(" ")[0].equals("MOVE")){
+
+                int locationMove = Integer.parseInt(move.split(" ")[1]);
+
+                moves.add(locationMove);
+            }
+        }
 
         if(moves.size() > 0){
-            int bestPosteID = GetPosteWhereAppNeedMinCard(cardsByZone, moves);  
-            //int bestPosteID = GetPosteWhereMaxAppsNeedCard(postesCounts, moves);                
+            int bestPosteID = GetPosteWhereAppNeedMinCard(remainingCards, moves);  
 
-            if(bestPosteID == -1) bestPosteID = GetPosteWithMinCards(cardsByZone, moves);
+            if(bestPosteID == -1) bestPosteID = GetPosteWithMinCards(remainingCards, moves);
 
             MOVE(bestPosteID);
         }else{
@@ -270,7 +292,7 @@ class Player {
 
         for(int posteID : moves){
 
-            int minSpace = Math.abs(teams.get(1).location - posteID);
+            int minSpace = Math.abs(oppTeam.location - posteID);
 
             System.err.printf("Poste %s : minSpace = %s\n", posteID, minSpace);            
             
@@ -398,18 +420,20 @@ class Player {
         PrintHeaders();
         PrintCollections();
         PrintRemainingCards();
-        PrintApplications();        
+        PrintApplications();
+        
+        System.err.print(gamePhase + "\n\n");
     }
 
     public static void PrintHeaders(){
         
-        String[] tableToPrint = new String[CARD_TYPE_COUNT + 1];
+        String[] tableToPrint = new String[CARD_TYPE_COUNT + 3];
 
         tableToPrint[0] = PadString("Zones", DISPLAY_MARGIN);
 
-        for(int i = 0; i < remainingCards.length; i++){
+        for(int i = 0; i < tableToPrint.length-1; i++){
 
-            tableToPrint[i + 1] = String.format("%02d", i);
+            tableToPrint[i+1] = String.format("%02d", i);
         }
 
         System.err.println(String.join(" ", tableToPrint) + "\n");        
@@ -458,7 +482,8 @@ class Player {
             case"DISCARD":              return "DISC";
             case"HAND":                 return "HAND";
             case"OPPONENT_CARDS":       return "O_CD";
-            default:                    return"";
+            case"AUTOMATED":            return "AUTO";
+            default:                    return mLocation;
         }
     }
 
@@ -525,6 +550,21 @@ class Player {
     
     // PARSING FUNCTIONS
 
+    public static void PARSE_POSSIBLE_MOVES(Scanner in){
+
+        possibleMoves = new ArrayList<String>();
+        
+        int possibleMovesCount = in.nextInt();
+        if (in.hasNextLine()) {
+            in.nextLine();
+        }
+
+        for (int i = 0; i < possibleMovesCount; i++){
+
+            possibleMoves.add(in.nextLine()); 
+        }
+    }
+
     public static void PARSE_CARDS_COLLECTIONS(Scanner in){
         
         int cardLocationsCount = in.nextInt();
@@ -545,15 +585,16 @@ class Player {
     }
 
     public static void PARSE_TEAMS(Scanner in){
-        
-        for (int i = 0; i < 2; i++) {
-            
-            Team mTeam = new Team(in, i);
-            teams.put(i, mTeam);
 
-            if(mTeam.location >= 0 && mTeam.location <= 7){
-                if(remainingCards[mTeam.location] > 0) remainingCards[mTeam.location] -=1;
-            }
+        myTeam = new Team(in, 0);
+        oppTeam = new Team(in, 1);
+
+        if(myTeam.location >= 0 && myTeam.location <= 7){
+            if(remainingCards[myTeam.location] > 0) remainingCards[myTeam.location] -=1;
+        }
+
+        if(oppTeam.location >= 0 && oppTeam.location <= 7){
+            if(remainingCards[oppTeam.location] > 0) remainingCards[oppTeam.location] -=1;
         }        
     }
 
@@ -572,6 +613,10 @@ class Player {
     }
 
     // ACTIONS FUNCTIONS
+
+    public static void THROW(int cardID){
+        System.out.println("THROW " + cardID);
+    }
 
     public static void PLAY(String action){
         System.out.println(action);
