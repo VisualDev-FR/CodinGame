@@ -18,11 +18,13 @@ class Player {
     static final int CONTINUOUS_INTEGRATION = 5;
     static final int CODE_REVIEW = 6;
     static final int REFACTORING = 7;
+    static final int BONUS_CARD = 8;
+    static final int TECHNICAL_DEBT = 9;
 
     static final int CARD_TYPE_COUNT = 8;
     static final int DISPLAY_MARGIN = 15;
 
-    public static void main(String args[]) {
+    public static void main(String args[]) throws Exception {
 
         Scanner in = new Scanner(System.in);
 
@@ -33,13 +35,13 @@ class Player {
             applications = new HashMap<Integer, Application>();
             teams = new HashMap<Integer, Team>();
             collections = new HashMap<String, CardCollection>();
-            gamePhase = in.next(); // can be MOVE, GIVE_CARD, THROW_CARD, PLAY_CARD or RELEASE           
+            gamePhase = in.next(); // can be MOVE, GIVE_CARD, THROW_CARD, PLAY_CARD or RELEASE
+
+            System.err.println(gamePhase + "\n");
 
             PARSE_APPLICATIONS(in);
             PARSE_TEAMS(in);
             PARSE_CARDS_COLLECTIONS(in);
-
-            PRINT_GAME();
 
             int possibleMovesCount = in.nextInt();
             if (in.hasNextLine()) {
@@ -48,10 +50,15 @@ class Player {
 
             List<Integer> moves = new ArrayList<Integer>();
             Map<Integer, Integer> appsReadyForRelease = new HashMap<Integer, Integer>();
+            List<String> possibleMoves = new ArrayList<String>();
             
             for (int i = 0; i < possibleMovesCount; i++) {
                 
                 String[] possibleMove = in.nextLine().split(" ");
+
+                possibleMoves.add(String.join(" ", possibleMove));
+
+                System.err.println(String.join(" ", possibleMove));
 
                 String moveType = possibleMove[0];
                 Integer locationMove = 0;
@@ -70,20 +77,22 @@ class Player {
                 }
             }
 
+            PRINT_GAME();
+
             // In the first league: RANDOM | MOVE <zoneId> | RELEASE <applicationId> | WAIT; In later leagues: | GIVE <cardType> | THROW <cardType> | TRAINING | CODING | DAILY_ROUTINE | TASK_PRIORITIZATION <cardTypeToThrow> <cardTypeToTake> | ARCHITECTURE_STUDY | CONTINUOUS_DELIVERY <cardTypeToAutomate> | CODE_REVIEW | REFACTORING;
             switch (gamePhase) {
                 case "MOVE":
                     PHASE_MOVE(moves, remainingCards);
                     break;
                 case "GIVE_CARD":
-                    PHASE_GIVE();
+                    PHASE_GIVE(possibleMoves);
                     break;
                 case "THROW_CARD":
                     //will appear in Bronze League
                     System.out.println("RANDOM");
                     break;
                 case "PLAY_CARD":
-                    PHASE_PLAY();
+                    PHASE_PLAY(possibleMoves);
                     break;
                 case "RELEASE":
                     PHASE_RELEASE(appsReadyForRelease);
@@ -97,12 +106,92 @@ class Player {
 
     //PHASE FUNCTIONS
 
-    public static void PHASE_GIVE(){
-        System.out.println("RANDOM");
+    public static void PHASE_GIVE(List<String> possibleMoves) throws Exception{
+
+
+        /* 
+         Si je donne une carte, je donne celle qui me permet d'obtenir une application avec le moins de cartes manquantes
+
+         for each card in myHand
+            for each app in applications
+                minMissingCard = GetMissingCard(main avec la carte en moins)
+         */
+
+        int minMissingCard = 9999;
+        int bestCardID = -1;
+
+        for(String move : possibleMoves){ 
+
+            String moveType = move.split(" ")[0];
+
+            if(moveType.equals("GIVE")){
+
+                int cardID = Integer.parseInt(move.split(" ")[1]); //Pour chaque mouvement possible, s'il s'agit de donner une carte, on stocke l'ID de la carte à donner
+                
+                for(Application mApp : applications.values()){
+
+                    CardCollection handTemp = new CardCollection(collections.get("HAND")); //Pour chaque appli, on crée une main virtuelle, dans laquelle on retire la carte que l'on doit eventuellement donner
+    
+                    handTemp.Remove(cardID); //S'il ne s'agit pas d'une carte bonus ou dette, on retire la carte courante de la main virtuelle que l'on vient de créer
+    
+                    int missingCard = mApp.GetMissingCardsForRelease(handTemp); //On stocke le nombre de carte manquantes pour construire l'appli courante, et on la compare au nombre mini de cartes manquantes pour chaque appli
+    
+                    if(missingCard < minMissingCard){
+                        minMissingCard = missingCard;
+                        bestCardID = cardID;
+                    }
+                }
+            }
+        }
+
+        if(bestCardID > -1){
+            GIVE(bestCardID);
+        }else{
+            RANDOM();
+        }
     }
 
-    public static void PHASE_PLAY(){
-        System.out.println("RANDOM");
+    public static void PHASE_PLAY(List<String> possibleMoves){
+
+        Map<String, Integer> movesToEval = new HashMap<String, Integer>();
+        
+        for(String move : possibleMoves){
+
+            int eval = 0;
+
+            switch(move){
+                case "TRAINING":
+                    eval = 24 * collections.get("HAND").cards[TECHNICAL_DEBT];
+                    break;
+                case "ARCHITECTURE_STUDY":
+                    eval = 24 * teams.get(0).score;
+                    break;
+                case "CODE_REVIEW":
+                    eval = 95;
+                    break;
+                case "REFACTORING":
+                    eval = 100 * collections.get("HAND").cards[TECHNICAL_DEBT];
+                    break;                
+            }
+
+            movesToEval.put(move, eval);
+        }
+
+        int maxEval = 0;
+        String bestMove="";
+
+        for(String move : movesToEval.keySet()){
+            if(movesToEval.get(move) > maxEval){
+                maxEval = movesToEval.get(move);
+                bestMove = move;
+            }
+        }
+        
+        if(!bestMove.equals("")){
+            PLAY(bestMove);
+        }else{
+            RANDOM();
+        } 
     }
 
     public static void PHASE_RELEASE(Map<Integer, Integer> appsReadyForRelease){
@@ -158,14 +247,18 @@ class Player {
 
     }
 
-    public static int GetPosteWhereAppNeedMinCard(int[] postesCounts, List<Integer> moves){
+    public static int GetPosteWhereAppNeedMinCard(int[] cardsByZone, List<Integer> moves){
 
         int bestPosteID = -1;
         int minNeededCard = 9999;
 
         for(int posteID : moves){
+
+            int minSpace = Math.abs(teams.get(1).location - posteID);
+
+            System.err.printf("Poste %s : minSpace = %s\n", posteID, minSpace);            
             
-            if(postesCounts[posteID] > 0){
+            if(cardsByZone[posteID] > 0 && minSpace > 1){
 
                 for(Application app : applications.values()){
 
@@ -181,15 +274,15 @@ class Player {
 
     }
 
-    public static int GetPosteWithMinCards(int[] tableOfCardsPerPoste, List<Integer> possibleMoves){
+    public static int GetPosteWithMinCards(int[] cardsByZone, List<Integer> possibleMoves){
 
         int minCardsCount = 9999;
         int bestPosteID = possibleMoves.get(0);
 
         for(int posteID : possibleMoves){
 
-            if(tableOfCardsPerPoste[posteID] > 0 && tableOfCardsPerPoste[posteID] < minCardsCount){
-                minCardsCount = tableOfCardsPerPoste[posteID];
+            if(cardsByZone[posteID] > 0 && cardsByZone[posteID] < minCardsCount){
+                minCardsCount = cardsByZone[posteID];
                 bestPosteID = posteID;
             }
         }
@@ -203,38 +296,35 @@ class Player {
 
         public String location;
         public int[] cards;
-        public int bonusCardsCount;
-        public int technicalDebtCardsCount;
+        public List<Integer> cardsID;
 
+        public CardCollection(CardCollection mCollection){
+
+            location = mCollection.location;
+            cards = mCollection.cards.clone();
+            cardsID = new ArrayList<Integer>(mCollection.cardsID);
+        }
 
         public CardCollection(Scanner in, String mLocation){
 
-            cards = new int[8];
-
+            cardsID = new ArrayList<Integer>();
+            cards = new int[CARD_TYPE_COUNT + 2];
             location = mLocation;
 
             for(int i = 0; i < cards.length; i++){
                 cards[i] = in.nextInt();
+                if(cards[i] > 0) cardsID.add(i);
             }
-
-            bonusCardsCount = in.nextInt();
-            technicalDebtCardsCount = in.nextInt();
         }
 
-        public void Print(){
-                                            System.err.printf("Location :                       %s\n", location);
-            if(cards[0] > 0)                System.err.printf("trainingCardsCount :             %s\n", cards[0]);
-            if(cards[1] > 0)                System.err.printf("codingCardsCount :               %s\n", cards[1]);
-            if(cards[2] > 0)                System.err.printf("dailyRoutineCardsCount :         %s\n", cards[2]);
-            if(cards[3] > 0)                System.err.printf("taskPrioritizationCardsCount :   %s\n", cards[3]);
-            if(cards[4] > 0)                System.err.printf("architectureStudyCardsCount :    %s\n", cards[4]);
-            if(cards[5] > 0)                System.err.printf("continuousDeliveryCardsCount :   %s\n", cards[5]);
-            if(cards[6] > 0)                System.err.printf("codeReviewCardsCount :           %s\n", cards[6]);
-            if(cards[7] > 0)                System.err.printf("refactoringCardsCount :          %s\n", cards[7]);
-            if(bonusCardsCount > 0)         System.err.printf("bonusCardsCount :                %s\n", bonusCardsCount);
-            if(technicalDebtCardsCount > 0) System.err.printf("technicalDebtCardsCount :        %s\n", technicalDebtCardsCount);
+        public void Remove(int cardID) throws Exception{
 
-            System.err.println(" ");
+            if(cards[cardID] <= 0){
+                cards = new int[0];
+                throw new Exception("Le nombre de cartes est déjà nul !");                
+            }else{
+                cards[cardID] = Math.max(0, cards[cardID] - 1);
+            }            
         }        
     }
 
@@ -252,17 +342,6 @@ class Player {
             score = in.nextInt();
             permanentDailyRoutineCards = in.nextInt();
             permanentArchitectureStudyCards = in.nextInt();
-        }
-
-        public void Print(){
-            
-            System.err.printf("Team id :                            %s\n",id);
-            System.err.printf("location :                           %s\n",location);
-            System.err.printf("score :                              %s\n",score);
-            System.err.printf("permanentDailyRoutineCards :         %s\n",permanentDailyRoutineCards);
-            System.err.printf("permanentArchitectureStudyCards :    %s\n",permanentArchitectureStudyCards);
-
-            System.err.println(" ");
         }
     }
 
@@ -285,30 +364,15 @@ class Player {
             }
         }
 
-        public void Print(){
-
-                                   System.err.printf("Application ID :             %s\n",id);
-            if(neededCards[0] > 0) System.err.printf("trainingNeeded :             %s\n",neededCards[0]);
-            if(neededCards[1] > 0) System.err.printf("codingNeeded :               %s\n",neededCards[1]);
-            if(neededCards[2] > 0) System.err.printf("dailyRoutineNeeded :         %s\n",neededCards[2]);
-            if(neededCards[3] > 0) System.err.printf("taskPrioritizationNeeded :   %s\n",neededCards[3]);
-            if(neededCards[4] > 0) System.err.printf("architectureStudyNeeded :    %s\n",neededCards[4]);
-            if(neededCards[5] > 0) System.err.printf("continuousDeliveryNeeded :   %s\n",neededCards[5]);
-            if(neededCards[6] > 0) System.err.printf("codeReviewNeeded :           %s\n",neededCards[6]);
-            if(neededCards[7] > 0) System.err.printf("refactoringNeeded :          %s\n",neededCards[7]);
-
-            System.err.println(" ");
-        }
-
         public int GetMissingCardsForRelease(CardCollection mCollection){
 
             int missingToRelease = 0;
 
             for(int i = 0; i < neededCards.length; i++){
-                missingToRelease += Math.max(0, neededCards[i] - mCollection.cards[i]);
+                missingToRelease += Math.max(0, neededCards[i] - mCollection.cards[i] * 2);
             }            
 
-            return missingToRelease - mCollection.bonusCardsCount;
+            return missingToRelease - mCollection.cards[BONUS_CARD];
         }
     }
 
@@ -336,20 +400,17 @@ class Player {
 
     public static void PrintCollections(){
 
-        String[][] tableToPrint = new String[collections.size()][11];
+        String[][] tableToPrint = new String[collections.size()][CARD_TYPE_COUNT + 3];
         int i = 0;
 
         for(CardCollection mCollection : collections.values()){
 
             tableToPrint[i][0]= PadString(mCollection.location, DISPLAY_MARGIN);
 
-            for(int j = 0; j < 8; j++){
+            for(int j = 0; j < mCollection.cards.length; j++){
 
                 tableToPrint[i][j+1] = PadInteger(mCollection.cards[j]);
             }
-
-            tableToPrint[i][9] = PadInteger(mCollection.bonusCardsCount);
-            tableToPrint[i][10] = PadInteger(mCollection.technicalDebtCardsCount);
 
             System.err.println(String.join(" ", tableToPrint[i]));
             i++;
@@ -370,6 +431,25 @@ class Player {
             for(int j = 0; j < 8; j++){
 
                 tableToPrint[i][j+1] = PadInteger(mApplication.neededCards[j]);
+            }
+
+            System.err.println(String.join(" ", tableToPrint[i]));
+            i++;
+        }
+
+        System.err.println(" ");
+        tableToPrint = new String[applications.size()][9];
+        i = 0;
+
+        for(Application mApplication : applications.values()){
+
+            tableToPrint[i][0]= PadString("App " + mApplication.id, DISPLAY_MARGIN);
+
+            for(int j = 0; j < 8; j++){
+
+                int missingCard = Math.max(0, mApplication.neededCards[j] - collections.get("HAND").cards[j] * 2);
+
+                tableToPrint[i][j+1] = PadInteger(missingCard);
             }
 
             System.err.println(String.join(" ", tableToPrint[i]));
@@ -448,8 +528,15 @@ class Player {
         }        
     }
 
-
     // ACTIONS FUNCTIONS
+
+    public static void PLAY(String action){
+        System.out.println(action);
+    }
+
+    public static void GIVE(int cardID){
+        System.out.println("GIVE " + cardID);
+    }
 
     public static void RELEASE(int appID){
         System.out.println("RELEASE " + appID);
