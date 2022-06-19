@@ -1,5 +1,6 @@
-import java.time.ZoneId;
 import java.util.*;
+
+import javax.sound.midi.SysexMessage;
 
 class Player {
 
@@ -12,6 +13,7 @@ class Player {
     static List<String> possibleMoves;
     static int[] remainingCards;
     static String action;
+    static List<String> playType; 
   
     static String gamePhase;    
 
@@ -32,6 +34,8 @@ class Player {
     public static void main(String args[]) throws Exception {
 
         Scanner in = new Scanner(System.in);
+
+        PARSE_PLAY_TYPES();
 
         while (true) {
 
@@ -138,6 +142,20 @@ class Player {
         public int CardCount(int cardID){
             return cards[cardID];
         }
+    
+        public void Print(){
+
+            String[] tableToPrint = new String[CARD_TYPE_COUNT + 3]; // +3 car on rajoute le nom de la collection en [0]
+
+            tableToPrint[0]= PadString(ParseLocation(location), DISPLAY_MARGIN);
+
+            for(int j = 0; j < cards.length; j++){
+
+                tableToPrint[j+1] = PadInteger(cards[j], 2,true);
+            }
+
+            System.err.println(String.join(" ", tableToPrint));
+        }
     }
 
     public static class Team{
@@ -182,7 +200,7 @@ class Player {
 
             for(int i = 0; i < neededCards.length; i++){
                 missingToRelease += Math.max(0, neededCards[i] - mCollection.cards[i] * 2);
-            }            
+            }
 
             return missingToRelease - mCollection.cards[BONUS_CARD];
         }
@@ -192,28 +210,29 @@ class Player {
 
     public static void PHASE_THROW() throws Exception{ //TODO: Choisir la carte nous fait perdre le moins d'appli dispo pour release /!\/!\/!\/!\/!\/!\/!\/!\/!\
 
-        // 1) le throw doit favoriser le jet de cartes bonus, sur le jet de compétences OK
-        // 2) le throw doit maximiser le nombre d'appli dispo pour release
-        // 3) le throw doit défavoriser le jet de cartes à jouer qui nous offrent un avantage certain
-
-        int minMissingCard = 9999;
-        int bestCardID = -1;
-
+        Map<String, Integer> throwsToEval = new HashMap<String, Integer>();
         int bonusCards = collections.get("HAND").cards[8];
+        String bestMove = "";
 
         if (bonusCards > 0){
 
-            bestCardID = 8;
+            bestMove = THROW(8);
         
         }else{
 
-            
-        }
+            for(String move : possibleMoves){
 
-        
-        
-        if(bestCardID > -1){
-            action = THROW(bestCardID);
+                if(move.startsWith("THROW")){
+                    int eval = EVAL_THROW(move);
+                    throwsToEval.put(move, eval);
+                }
+            }
+
+            bestMove = GetMinValue(throwsToEval);
+        }   
+
+        if(!bestMove.equals("")){
+            action = bestMove;
         }else{
             action = RANDOM();
         }
@@ -221,51 +240,34 @@ class Player {
 
     public static void PHASE_GIVE() throws Exception{ //TODO: compléter l'evaluation des cartes à donner en prenant en compte l'avantage qu'on perdra en jouant la carte
 
-        /* Logique de choix des cartes à donner :
-                Si je donne une carte, je donne celle qui me permet d'obtenir une application avec le moins de cartes manquantes
-        */
+        Map<String, Integer> throwsToEval = new HashMap<String, Integer>();
+        String bestMove = "";
 
-        int minMissingCard = 9999;
-        int bestCardID = -1;
+        for(String move : possibleMoves){
 
-        for(String move : possibleMoves){ 
-
-            movesToEval.put(move, -1);
-
-            String moveType = move.split(" ")[0];
-
-            if(moveType.equals("GIVE")){
-
-                int cardID = Integer.parseInt(move.split(" ")[1]); //Pour chaque mouvement possible, s'il s'agit de donner une carte, on stocke l'ID de la carte à donner
-                
-                for(Application mApp : applications.values()){
-
-                    CardCollection handTemp = new CardCollection(collections.get("HAND")); //Pour chaque appli, on crée une main virtuelle, dans laquelle on retire la carte que l'on doit eventuellement donner
-    
-                    handTemp.RemoveCard(cardID); //S'il ne s'agit pas d'une carte bonus ou dette, on retire la carte courante de la main virtuelle que l'on vient de créer
-    
-                    int missingCard = mApp.GetMissingCardsForRelease(handTemp); //On stocke le nombre de carte manquantes pour construire l'appli courante, et on la compare au nombre mini de cartes manquantes pour chaque appli
-                    
-                    if(missingCard < minMissingCard){
-                        minMissingCard = missingCard;
-                        bestCardID = cardID;
-                    }
-                }
+            if(move.startsWith("GIVE")){
+                int eval = EVAL_THROW(move);
+                throwsToEval.put(move, eval);
             }
         }
 
-        if(bestCardID > -1){
-            action = GIVE(bestCardID);
+        bestMove = GetMinValue(throwsToEval);
+
+        if(!bestMove.equals("")){
+            action = bestMove;
         }else{
             action = RANDOM();
         }
     }
 
-    public static void PHASE_PLAY() throws Exception{ //TODO: ne pas jouer une carte, si elle nous fait perdre un gros avantage sur une release d'appli
-
-        //TODO: si je suis en mesure de release une appli, j'envoi un WAIT ici
+    public static void PHASE_PLAY() throws Exception{
 
         Map<String, Integer> moves = new HashMap<String, Integer>();
+
+        if(CanIReleaseAnApp()){
+            action = WAIT();
+            return;
+        }
         
         for(String move : possibleMoves){
 
@@ -313,7 +315,13 @@ class Player {
                 bestMove = move;
             }
         }
-        
+
+        /* 
+            if(!MayIPlayThatCard(bestMove)){
+            action = WAIT();
+            }else if...
+        */
+
         if(!bestMove.equals("")){
             action = bestMove;
         }else{
@@ -331,13 +339,22 @@ class Player {
 
                 CardCollection usefullHand = GetUsefullHand(); //collections.get("HAND");
 
-                int locationMove = Integer.parseInt(move.split(" ")[1]);
-                int missingToRelease = applications.get(locationMove).GetMissingCardsForRelease(usefullHand);
+                int appID = Integer.parseInt(move.split(" ")[1]);
+
+                int missingToRelease = applications.get(appID).GetMissingCardsForRelease(usefullHand);
 
                 movesToEval.put(move, missingToRelease);
 
-                if(missingToRelease == 0 || missingToRelease + allMyCards.cards[TECHNICAL_DEBT] < 8) appsReadyForRelease.put(locationMove, missingToRelease);
-                //appsReadyForRelease.put(locationMove, missingToRelease);
+                int myTechnicalDebt = allMyCards.cards[TECHNICAL_DEBT];
+                int oppTechnicalDebt = collections.get("OPPONENT_CARDS").cards[TECHNICAL_DEBT];
+
+                //System.err.printf("app %s : missing = %s, myDebt = %s, oppDebt = %s\n", appID, missingToRelease, myTechnicalDebt, oppTechnicalDebt);
+
+                if(missingToRelease == 0 || missingToRelease + myTechnicalDebt < oppTechnicalDebt){
+                    appsReadyForRelease.put(appID, missingToRelease);
+                }else{
+                    movesToEval.put(move, movesToEval.get(move) * -1);
+                }
             }
         }
 
@@ -360,6 +377,31 @@ class Player {
         }
     } 
     
+    public static void PHASE_RELEASE_NEW(){
+
+        Map<String, Integer> releasesToEval = new HashMap<String, Integer>();
+
+        for(String move : possibleMoves){
+
+            if(move.startsWith("RELEASE")){
+
+                int eval = EVAL_RELEASE(move);
+
+                releasesToEval.put(move, eval);
+                movesToEval.put(move, eval);
+            
+            }else if(move.startsWith("WAIT")){
+
+                releasesToEval.put(move, 1);
+                movesToEval.put(move, 1);                
+            }
+        }
+
+        String bestMove = GetMinValue(releasesToEval);
+
+        action = bestMove;
+    }
+
     public static void PHASE_MOVE_SIMPLE(){
 
         System.err.printf("My position = %s\nOppPosition = %s\n\n", myTeam.location, oppTeam.location);
@@ -412,6 +454,61 @@ class Player {
     }    
         
     // EVALUATION FUNCTIONS
+
+    public static int EVAL_RELEASE(String move){
+
+        // 1) la release doit minimiser le nombre de dettes techniques  +1 pts
+        // 2) la release doit empecher l'adversaire de release          +10 pts
+
+        int appID = Integer.parseInt(move.split(" ")[1]);
+
+        CardCollection myHand = GetUsefullHand();
+        CardCollection oppHand = GetAllOppCards();
+
+        int missingWithMyHand = applications.get(appID).GetMissingCardsForRelease(myHand);
+        int missingWithOppHand = applications.get(appID).GetMissingCardsForRelease(oppHand);
+
+        System.err.printf("app %s : myHand %s, oppHand %s\n", PadInteger(appID, 2, false), missingWithMyHand, missingWithOppHand);
+
+        int eval = 999;
+
+        if(missingWithMyHand > missingWithOppHand && missingWithMyHand == 0){
+        
+            eval = -999;
+        
+        }else if(missingWithMyHand < missingWithOppHand && missingWithOppHand > 0){
+
+            eval = missingWithMyHand * missingWithOppHand;
+        
+        }        
+
+        return eval;
+    }
+
+    public static int EVAL_THROW(String move) throws Exception{
+
+        // 1) le throw doit favoriser le jet de cartes bonus, sur le jet de compétences                 OK
+        // 2) le throw doit maximiser le nombre d'appli dispo pour release                              OK
+        // 3) le throw doit défavoriser le jet de cartes à jouer qui nous offrent un avantage certain   NOK
+
+        int cardID = Integer.parseInt(move.split(" ")[1]); 
+        int minMissingCard = 9999;
+        
+        for(Application mApp : applications.values()){
+
+            CardCollection handTemp = GetUsefullHand(); //new CardCollection(collections.get("HAND"));
+
+            handTemp.RemoveCard(cardID);
+
+            int missingCard = mApp.GetMissingCardsForRelease(handTemp);
+            
+            minMissingCard = Math.min(minMissingCard, missingCard);
+        }
+
+        movesToEval.put(move, minMissingCard);
+        
+        return minMissingCard;                
+    }
 
     public static int EVAL_MOVE_NEW(String move){ //TODO: re-evaluer les moves sur 1) le nombre d'applis que ça peut nous permettre de gagner 2) les cartes à jouer qui nous avantagent
 
@@ -489,13 +586,14 @@ class Player {
 
         int coef_Length = tMove.length > 2 ? 0 : 1;
         int coef_Space = minSpace <= 1 || minSpace == 7 ? 2 : 1;
+        int coef_Zone = Integer.parseInt(tMove[1]) == 5 ? 1 : 2;
 
         for(Application mApp : applications.values()){
 
             int minMissingCards = mApp.GetMissingCardsForRelease(handTemp);
 
             int coef_Negatif = minMissingCards < 0 && tMove.length < 3 ? -1 : 1;            
-            int eval = (minMissingCards + coef_Length) * coef_Space * coef_Negatif;
+            int eval = (minMissingCards + coef_Length) * coef_Space * coef_Negatif * coef_Zone;
             
             minEval = Math.min(minEval, eval);
         }
@@ -515,7 +613,7 @@ class Player {
         
         int eval = 1;
 
-        CardCollection nextDraw = GetNextDraw();
+        CardCollection nextDraw = GetUsefullDraw();
 
         if(nextDraw != null){
 
@@ -540,11 +638,11 @@ class Player {
         
         int eval = 1;
 
-        CardCollection nextDraw = GetNextDraw();
+        CardCollection nextDraw = GetUsefullDraw();
 
         if(nextDraw != null){
 
-            int technicalProportion = GetNextDraw().proportions[TECHNICAL_DEBT];
+            int technicalProportion = GetUsefullDraw().proportions[TECHNICAL_DEBT];
             int technicalDebt = collections.get("HAND").cards[TECHNICAL_DEBT];
             
             eval = technicalProportion > 0 ? technicalDebt * (1000 / (technicalProportion)) : 1000;
@@ -569,29 +667,20 @@ class Player {
         // 2 applis ayant une somme nulle => 100
 
         int cardID = Integer.parseInt(move.split(" ")[1]);
-        int totalApps = 0;
+        int totalNeededCards = 0;
         int eval = -9999;
 
-        if(cardID == 8) return 25;
-
-        if(GetTotalCardNeeded(cardID) > 0){
-
-            for(Application mApp : applications.values()){
-
-                CardCollection handTemp = GetUsefullHand(); //collections.get("HAND")
-
-                int missingCard = mApp.neededCards[cardID] - 2 * handTemp.cards[cardID];
-
-                if(missingCard > 0){
-                    missingCard -= 2;
-                    if(missingCard <= 0) totalApps++;
-                }                    
-                            
-            }
-
-            eval = totalApps > 0 ? totalApps * 50 : eval;        
+        if(cardID == 8){
+            eval = 8 * 9999;
+            movesToEval.put(move, eval);                
+            return eval;            
         }
 
+        for(Application mApp : applications.values()){
+            totalNeededCards += mApp.neededCards[cardID];           
+        }
+
+        eval = totalNeededCards * 9999;
         movesToEval.put(move, eval);                
         return eval;
     }
@@ -667,6 +756,106 @@ class Player {
 
     // GENERIC FUNCTIONS
 
+    public static CardCollection GetMostProbableOpponentHand(){ //TODO: compléter cette fonction...
+
+        CardCollection oppCards = new CardCollection(collections.get("OPPONENT_CARDS"));
+
+        if(collections.containsKey("OPPONENT_AUTOMATED")){
+
+            int[] oppAutoCards = collections.get("OPPONENT_AUTOMATED").cards;
+
+            for(int i = 0; i < oppAutoCards.length; i++){
+
+                oppCards.cards[i] += oppAutoCards[i];
+            }
+
+
+            oppCards.ResetProportions();
+        }
+
+        return null;
+    }
+
+    public static CardCollection GetAllOppCards(){ //TODO: compléter cette fonction...
+
+        CardCollection oppCards = new CardCollection(collections.get("OPPONENT_CARDS"));
+
+        if(collections.containsKey("OPPONENT_AUTOMATED")){
+
+            int[] oppAutoCards = collections.get("OPPONENT_AUTOMATED").cards;
+
+            for(int i = 0; i < oppAutoCards.length; i++){
+
+                oppCards.cards[i] += oppAutoCards[i];
+            }
+
+            oppCards.ResetProportions();
+        }
+
+        return oppCards;
+    }    
+
+    public static boolean MayIPlayThatCard(String bestMove) throws Exception{
+
+        String bestMoveType = bestMove.split(" ")[0];
+        int bestMoveCardID = playType.indexOf(bestMoveType);
+
+        if(bestMoveCardID == -1){
+            return true;
+        }else{
+
+            CardCollection myActualHand = GetUsefullHand();
+            CardCollection myHandAfterPlay = GetUsefullHand();
+    
+            myHandAfterPlay.RemoveCard(bestMoveCardID);
+    
+            int missingWithMyHand = 999;
+            int missingAfterPlay = 999;
+    
+            for(Application mApp : applications.values()){
+    
+                missingWithMyHand = Math.min(missingWithMyHand, mApp.GetMissingCardsForRelease(myActualHand));
+                missingAfterPlay = Math.min(missingAfterPlay, mApp.GetMissingCardsForRelease(myHandAfterPlay));
+            }
+    
+            if(missingWithMyHand < missingAfterPlay){
+                return false;
+            }else{
+                return true;
+            }
+        }        
+    }
+
+    public static boolean CanIReleaseAnApp(){
+
+        CardCollection useFullHand = GetUsefullHand();
+
+        for(Application mApp : applications.values()){
+
+            if(mApp.GetMissingCardsForRelease(useFullHand) == 0) return true;
+        }
+
+        return false;
+    }
+
+    public static String GetMinValue(Map<String, Integer> mapToEval){
+
+        int minValue = Integer.MAX_VALUE;
+        String minKey = "";
+
+        for(String key : mapToEval.keySet()){
+
+            int val = mapToEval.get(key);
+
+            if(val < minValue){
+                minValue = val;
+                minKey = key;
+            }
+        }
+
+        return minKey;
+    }
+
     public static int GetDistance(int zoneA, int zoneB){
 
         if(zoneA == -1 && zoneB == -1){
@@ -695,6 +884,7 @@ class Player {
     public static CardCollection GetUsefullHand(){
 
         CardCollection usefullHand = new CardCollection(collections.get("HAND"));
+        usefullHand.location = "USEF";
 
         if(collections.containsKey("AUTOMATED")){
 
@@ -706,45 +896,16 @@ class Player {
             }
         }
 
-        if(collections.containsKey("PLAYED_CARDS")){
-
-            int[] playedCards = collections.get("PLAYED_CARDS").cards;
-
-            for(int i = 0; i < playedCards.length; i++){
-
-                usefullHand.cards[i] += playedCards[i];
-            }
-        }        
-
         return usefullHand;
     }
 
-    public static CardCollection GetNextDraw(){
+    public static CardCollection GetUsefullDraw(){
 
         if(collections.containsKey("DRAW")){
             return collections.get("DRAW");
         }else{
             return collections.get("DISCARD");
         }
-    }
-
-    public static int GetTotalCardNeeded(int cardID){
-
-        if(cardID < 8){
-
-            int totalNeededCards = 0;
-
-            for(Application mApp : applications.values()){
-                totalNeededCards += mApp.neededCards[cardID]; 
-            }
-    
-            return totalNeededCards;
-        
-        }else{            
-            return -1;
-        }
-
-
     }
 
     // PRINTING FUNCTIONS
@@ -774,6 +935,7 @@ class Player {
     public static void PrintPossibleMoves(){
 
         System.err.println("PHASE = " + gamePhase + "\n");
+        System.err.printf("myLoc : %s\noppLoc : %s\n", myTeam.location, oppTeam.location);
 
         for(String move : possibleMoves){
 
@@ -811,23 +973,26 @@ class Player {
 
     public static void PrintCollections(){
 
-        String[][] tableToPrint = new String[collections.size()][CARD_TYPE_COUNT + 3];
-        int i = 0;
+        
+        PrintCollection("PLAYED_CARDS");
+        System.err.println(" ");
 
-        for(CardCollection mCollection : collections.values()){
-
-            tableToPrint[i][0]= PadString(ParseLocation(mCollection.location), DISPLAY_MARGIN);
-
-            for(int j = 0; j < mCollection.cards.length; j++){
-
-                tableToPrint[i][j+1] = PadInteger(mCollection.cards[j], 2,true);
-            }
-
-            System.err.println(String.join(" ", tableToPrint[i]));
-            i++;
-        }
+        allMyCards.Print();
+        PrintCollection("AUTOMATED");
+        PrintCollection("DISCARD");        
+        PrintCollection("DRAW");
+        PrintCollection("HAND");
 
         System.err.println(" ");
+
+        PrintCollection("OPPONENT_AUTOMATED");
+        PrintCollection("OPPONENT_CARDS");
+
+        System.err.println(" ");
+    }
+
+    public static void PrintCollection(String location){
+        if(collections.containsKey(location)) collections.get(location).Print();        
     }
 
     public static String ParseLocation(String mLocation){
@@ -918,6 +1083,20 @@ class Player {
     
     // PARSING FUNCTIONS
 
+    public static void PARSE_PLAY_TYPES(){
+        
+        playType = new ArrayList<String>();
+
+        playType.add("TRAINING");
+        playType.add("CODING");
+        playType.add("DAILY_ROUTINE");
+        playType.add("TASK_PRIORITIZATION");
+        playType.add("ARCHITECTURE_STUDY");
+        playType.add("CONTINUOUS_INTEGRATION");
+        playType.add("CODE_REVIEW");
+        playType.add("REFACTORING");        
+    }
+
     public static void PARSE_POSSIBLE_MOVES(Scanner in){
 
         possibleMoves = new ArrayList<String>();
@@ -953,12 +1132,13 @@ class Player {
         }
 
         allMyCards = new CardCollection(collections.get("HAND"));
+        allMyCards.location = "AMYC";
 
         for(CardCollection collection : collections.values()){
 
             String location = collection.location;
 
-            if(location != "PLAYED_CARDS" || location != "AUTOMATED" || location !="DISCARD" || location !="DRAW"){
+            if(location.equals("AUTOMATED") || location.equals("DISCARD") || location.equals("DRAW")){ //On ne met pas la "HAND" car allMyCard est un clone de "HAND"
 
                 for(int i = 0; i < collection.cards.length; i++){
 
