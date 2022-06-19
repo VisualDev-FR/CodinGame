@@ -12,6 +12,7 @@ class Player {
     static Map<String, CardCollection> collections;
     static List<String> possibleMoves;
     static int[] remainingCards;
+    static int[] totalNeeds;
     static String action;
     static List<String> playType; 
   
@@ -142,7 +143,15 @@ class Player {
         public int CardCount(int cardID){
             return cards[cardID];
         }
-    
+        
+        public int nonTechnicalDebtCardCount(){
+            return totalCards - cards[TECHNICAL_DEBT];
+        }
+
+        public int competenceCardsCount(){
+            return totalCards - cards[BONUS_CARD] - cards[TECHNICAL_DEBT];
+        }
+
         public void Print(){
 
             String[] tableToPrint = new String[CARD_TYPE_COUNT + 3]; // +3 car on rajoute le nom de la collection en [0]
@@ -264,7 +273,10 @@ class Player {
 
         Map<String, Integer> moves = new HashMap<String, Integer>();
 
-        if(CanIReleaseAnApp()){
+        int releasableApp = CanIReleaseAnApp();
+
+        if(releasableApp > -1){
+            possibleMoves.add("RELEASE " + releasableApp + "(at next turn) => we dont play");
             action = WAIT();
             return;
         }
@@ -350,10 +362,11 @@ class Player {
 
                 //System.err.printf("app %s : missing = %s, myDebt = %s, oppDebt = %s\n", appID, missingToRelease, myTechnicalDebt, oppTechnicalDebt);
 
-                if(missingToRelease == 0 || missingToRelease + myTechnicalDebt < oppTechnicalDebt){
+                //appsReadyForRelease.put(appID, missingToRelease);
+                if(missingToRelease <= 0){
                     appsReadyForRelease.put(appID, missingToRelease);
                 }else{
-                    movesToEval.put(move, movesToEval.get(move) * -1);
+                    movesToEval.put(move, movesToEval.get(move));
                 }
             }
         }
@@ -411,7 +424,13 @@ class Player {
 
         while(!zoneFound){
             startZone = startZone < 7 ? startZone + 1 : 0;
-            zoneFound = !IsZoneAsideOpponent(startZone) && possibleMoves.contains(MOVE(startZone));
+            zoneFound = 
+                GetDistance(startZone, oppTeam.location, true) > 1 && 
+                possibleMoves.contains(MOVE(startZone)) &&
+                remainingCards[startZone] > 0 && 
+                totalNeeds[startZone] > 0;
+
+            movesToEval.put(MOVE(startZone), zoneFound ? 1 : 0);
         }
         
         action = MOVE(startZone);
@@ -422,14 +441,9 @@ class Player {
         Map<String, Integer> moves = new HashMap<String, Integer>();
 
         for(String move : possibleMoves){
-
             if(move.split(" ")[0].equals("MOVE")){
-
                 int eval = EVAL_MOVE(move);
-
                 moves.put(move, eval);
-
-                //System.err.printf("%s : %s\n", PadString(move, 8), eval);
             }
         }
 
@@ -510,27 +524,13 @@ class Player {
         return minMissingCard;                
     }
 
-    public static int EVAL_MOVE_NEW(String move){ //TODO: re-evaluer les moves sur 1) le nombre d'applis que ça peut nous permettre de gagner 2) les cartes à jouer qui nous avantagent
+    public static int EVAL_MOVE(String move){
 
-        // 1) la zone doit maximiser le nombre d'appli dispo pour release
-        // 2) la zone doit nous offrir une carte dont on tirera un avantage certain si on la joue
-        // 3) la zone doit être à la position supérieure la plus proche de notre location actuelle
-        // 5) la zone doit favoriser un passage à l'administration, plutot que donner une compétence à l'adversaire
-        // 4) la zone ne doit pas se situer à proximité de l'adversaire, on préferera passer à l'administration
-
-        /* Regles de proximités entre joueurs du moteur de jeu
-            if opponentPlayer.getZoneId()>=0
-            && ((abs(opponentPlayer.getZoneId() - player.getZoneId())<=1)
-            || (abs(opponentPlayer.getZoneId() - player.getZoneId())==7)))         
-        */
-
-        CardCollection handTemp = GetUsefullHand();//new CardCollection(collections.get("HAND"));
+        CardCollection handTemp = GetUsefullHand();
         
         String[] tMove = move.split(" ");
         int moveZoneID = Integer.parseInt(tMove[1]);
 
-        int minEval = 9999;
-
         for(int i = 1; i < tMove.length; i++){
 
             int zoneID = Integer.parseInt(tMove[i]);
@@ -542,58 +542,20 @@ class Player {
             }            
         }
 
+        int minSpace = GetDistance(oppTeam.location, moveZoneID, true);
+
         int coef_Length = tMove.length > 2 ? 0 : 1;
-        int coef_Space = IsZoneAsideOpponent(moveZoneID) ? 2 : 1;
-        int coef_Direction = moveZoneID > myTeam.location ? 2 : 1;
-        int coef_Distance = GetDistance(moveZoneID, myTeam.location);
-
-        for(Application mApp : applications.values()){
-
-            int minMissingCards = mApp.GetMissingCardsForRelease(handTemp);
-
-            int coef_Negatif = minMissingCards < 0 && tMove.length < 3 ? -1 : 1;
-            int eval = (minMissingCards + coef_Length + coef_Space + coef_Direction + coef_Distance) * coef_Negatif;
-            
-            minEval = Math.min(minEval, eval);
-        }        
-
-        movesToEval.put(move, minEval);
-
-        return minEval;
-    }    
-
-    public static int EVAL_MOVE(String move){
-
-        CardCollection handTemp = GetUsefullHand();//new CardCollection(collections.get("HAND"));
-        
-        String[] tMove = move.split(" ");
+        int coef_Space = minSpace <= 1 || minSpace == 7 ? 999 : 0;
+        int coef_Remaining = remainingCards[moveZoneID] > 0 ? 0 : 999;
+        int coef_Zone = GetMoveCoef(moveZoneID);
+        int coef_Needs = -totalNeeds[moveZoneID];
 
         int minEval = 9999;
-        int minSpace = 9999;
-
-        for(int i = 1; i < tMove.length; i++){
-
-            int zoneID = Integer.parseInt(tMove[i]);
-
-            minSpace = Math.min(minSpace, GetDistance(oppTeam.location, zoneID));
-
-            if(remainingCards[zoneID] > 0){
-                handTemp.AddCard(zoneID);
-            }else{
-                handTemp.AddCard(BONUS_CARD);
-            }            
-        }
-
-        int coef_Length = tMove.length > 2 ? 0 : 1;
-        int coef_Space = minSpace <= 1 || minSpace == 7 ? 2 : 1;
-        int coef_Zone = Integer.parseInt(tMove[1]) == 5 ? 1 : 2;
-
         for(Application mApp : applications.values()){
 
             int minMissingCards = mApp.GetMissingCardsForRelease(handTemp);
-
-            int coef_Negatif = minMissingCards < 0 && tMove.length < 3 ? -1 : 1;            
-            int eval = (minMissingCards + coef_Length) * coef_Space * coef_Negatif * coef_Zone;
+           
+            int eval = (coef_Needs + coef_Zone + minMissingCards + coef_Space + coef_Remaining) * coef_Length;
             
             minEval = Math.min(minEval, eval);
         }
@@ -654,33 +616,25 @@ class Player {
     }
 
     public static int EVAL_DAILY_ROUTINE(String move){
-        int eval = 9999;
+        int eval = 9999 * (5 - myTeam.permanentDailyRoutineCards);
         movesToEval.put(move, eval);
         return eval;
     }
 
     public static int EVAL_CONTINUOUS_INTEGRATION(String move){
 
-        // On renvoi un entier qui correspond à 50 fois le nombre d'appli pouvant avoir une competence complétée avec cette carte + ce qu'on a en jeu
-        // Si l'appli courante peut avoir cette compétence rempli sans carte supplémentaire, on ne la compte pas dans le calcul
-        // 1 appli ayant une somme nulle => 50
-        // 2 applis ayant une somme nulle => 100
-
         int cardID = Integer.parseInt(move.split(" ")[1]);
-        int totalNeededCards = 0;
         int eval = -9999;
 
-        if(cardID == 8){
-            eval = 8 * 9999;
-            movesToEval.put(move, eval);                
-            return eval;            
+        if(collections.get("HAND").nonTechnicalDebtCardCount() > 2){
+            
+            if(cardID == 8){            
+                eval = 8 * 9999;
+            }else if(cardID < 8){
+                eval = 2 * totalNeeds[cardID] * 9999;
+            }
         }
 
-        for(Application mApp : applications.values()){
-            totalNeededCards += mApp.neededCards[cardID];           
-        }
-
-        eval = totalNeededCards * 9999;
         movesToEval.put(move, eval);                
         return eval;
     }
@@ -737,7 +691,7 @@ class Player {
     }
     
     public static int EVAL_ARCHITECTURE_STUDY(String move){
-        int eval = 9998;
+        int eval = 9999 * (5 - myTeam.permanentArchitectureStudyCards);
         movesToEval.put(move, eval);
         return eval;
     }
@@ -755,6 +709,42 @@ class Player {
     }
 
     // GENERIC FUNCTIONS
+
+    public static int GetMoveCoef(int posteID){
+
+        int coef = 0;
+
+        switch(posteID){
+            case TRAINING:
+                coef = 0;
+                break;
+            case CODING:
+                coef = 0;
+                break;
+            case DAILY_ROUTINE:
+                coef = -5;
+                break;
+            case TASK_PRIORITIZATION:
+                coef = 0;
+                break;
+            case ARCHITECTURE_STUDY:
+                coef = -5;
+                break;
+            case CONTINUOUS_INTEGRATION:
+                coef = -10;
+                break;
+            case CODE_REVIEW:
+                coef = 0;
+                break;
+            case REFACTORING:
+                coef = -collections.get("HAND").cards[TECHNICAL_DEBT];
+                break;
+            default:
+                coef = 0;
+        }
+
+        return coef;
+    }
 
     public static CardCollection GetMostProbableOpponentHand(){ //TODO: compléter cette fonction...
 
@@ -826,16 +816,16 @@ class Player {
         }        
     }
 
-    public static boolean CanIReleaseAnApp(){
+    public static int CanIReleaseAnApp(){
 
         CardCollection useFullHand = GetUsefullHand();
 
         for(Application mApp : applications.values()){
 
-            if(mApp.GetMissingCardsForRelease(useFullHand) == 0) return true;
+            if(mApp.GetMissingCardsForRelease(useFullHand) == 0) return mApp.id;
         }
 
-        return false;
+        return -1;
     }
 
     public static String GetMinValue(Map<String, Integer> mapToEval){
@@ -856,9 +846,14 @@ class Player {
         return minKey;
     }
 
-    public static int GetDistance(int zoneA, int zoneB){
+    public static int GetDistance(int zoneA, int zoneB, boolean ignoreAdmin){
 
-        if(zoneA == -1 && zoneB == -1){
+        if(!ignoreAdmin){
+            zoneA = zoneA < 0 ? 0 : zoneA;
+            zoneB = zoneB < 0 ? 0 : zoneB;
+        }
+
+        if(zoneA == -1 && zoneB == -1 && ignoreAdmin){
             
             return 999;
 
@@ -874,7 +869,7 @@ class Player {
 
         int oppZoneID = oppTeam.location;
 
-        if(zoneID > -1 && oppZoneID > -1 && GetDistance(zoneID, oppZoneID) > 1){
+        if(zoneID > -1 && oppZoneID > -1 && GetDistance(zoneID, oppZoneID, true) > 1){
             return false;
         }else{
             return true;
@@ -935,7 +930,7 @@ class Player {
     public static void PrintPossibleMoves(){
 
         System.err.println("PHASE = " + gamePhase + "\n");
-        System.err.printf("myLoc : %s\noppLoc : %s\n", myTeam.location, oppTeam.location);
+        System.err.printf("myLoc : %s / oppLoc : %s\n\n", myTeam.location, oppTeam.location);
 
         for(String move : possibleMoves){
 
@@ -1011,20 +1006,26 @@ class Player {
 
     public static void PrintApplications(){
 
-        String[][] tableToPrint = new String[applications.size()][9];
-        int i = 0;
+        String[] tableToPrint = new String[9];
+
+        tableToPrint[0] = PadString("NEEDS", DISPLAY_MARGIN);
+
+        for(int i = 0; i < CARD_TYPE_COUNT; i++){
+            tableToPrint[i+1] = PadInteger(totalNeeds[i], 2, true);
+        }
+
+        System.err.println(String.join(" ", tableToPrint) + "\n");
 
         for(Application mApplication : applications.values()){
 
-            tableToPrint[i][0]= PadString("App " + mApplication.id, DISPLAY_MARGIN);
+            tableToPrint[0]= PadString("App " + mApplication.id, DISPLAY_MARGIN);
 
             for(int j = 0; j < 8; j++){
 
-                tableToPrint[i][j+1] = PadInteger(mApplication.neededCards[j], 2, true);
+                tableToPrint[j+1] = PadInteger(mApplication.neededCards[j], 2, true);
             }
 
-            System.err.println(String.join(" ", tableToPrint[i]));
-            i++;
+            System.err.println(String.join(" ", tableToPrint));
         }
 
         System.err.println(" ");
@@ -1157,12 +1158,18 @@ class Player {
     public static void PARSE_APPLICATIONS(Scanner in){
         
         int applicationsCount = in.nextInt();
+        totalNeeds = new int[CARD_TYPE_COUNT];
         
         for (int i = 0; i < applicationsCount; i++) {
             
             String objectType = in.next();
 
             Application mApplication = new Application(in);
+
+            for(int j = 0; j < CARD_TYPE_COUNT; j++){
+
+                totalNeeds[j] += mApplication.neededCards[j];
+            }
 
             applications.put(mApplication.id, mApplication);
         }        
