@@ -1,7 +1,5 @@
 import java.util.*;
 
-import javax.sound.midi.SysexMessage;
-
 class Player {
 
     static Team myTeam;
@@ -14,9 +12,10 @@ class Player {
     static int[] remainingCards;
     static int[] totalNeeds;
     static String action;
-    static List<String> playType; 
+    static List<String> playType;
   
-    static String gamePhase;    
+    static String gamePhase;
+    static int gameTurn = 0;    
 
     static final int TRAINING = 0;
     static final int CODING = 1;
@@ -76,6 +75,8 @@ class Player {
             PRINT_GAME();
 
             System.out.println(action);
+            
+            gameTurn++;
         }
     }
     
@@ -152,6 +153,31 @@ class Player {
             return totalCards - cards[BONUS_CARD] - cards[TECHNICAL_DEBT];
         }
 
+        public int technicalDebtCount(){
+            return cards[TECHNICAL_DEBT];
+        }
+
+        public int releasableAppsCount(){
+
+            int releasableApps = 0;
+
+            for(Application mApp : applications.values()){
+                if(mApp.GetMissingCardsForRelease(this) <= 0) releasableApps++;
+            }
+            return releasableApps;
+        }
+
+        public int usefullCardCount(boolean withBonus){
+            
+            int totalUsefullCards = 0;
+
+            for(int i = 0; i < cards.length; i++){
+                if(totalNeeds[i] > 0 && cards[i] > 0) totalUsefullCards++;
+            }
+
+            return totalUsefullCards + (withBonus ? cards[BONUS_CARD] : 0);
+        }
+
         public void Print(){
 
             String[] tableToPrint = new String[CARD_TYPE_COUNT + 3]; // +3 car on rajoute le nom de la collection en [0]
@@ -213,11 +239,24 @@ class Player {
 
             return missingToRelease - mCollection.cards[BONUS_CARD];
         }
+
+        public void Print(){
+
+            String[] tableToPrint = new String[9];
+
+            tableToPrint[0]= PadString("App " + id, DISPLAY_MARGIN);
+
+            for(int j = 0; j < 8; j++){
+                tableToPrint[j+1] = PadInteger(neededCards[j], 2, true);
+            }
+
+            System.err.println(String.join(" ", tableToPrint));
+        }
     }
 
-    //PHASE FUNCTIONS
+    // PHASE FUNCTIONS
 
-    public static void PHASE_THROW() throws Exception{ //TODO: Choisir la carte nous fait perdre le moins d'appli dispo pour release /!\/!\/!\/!\/!\/!\/!\/!\/!\
+    public static void PHASE_THROW() throws Exception{ //TODO: ne pas jeter les cartes de jeu les plus importantes + donner les cartes qui ne servent plus à rien si elles sont pas trop importantes
 
         Map<String, Integer> throwsToEval = new HashMap<String, Integer>();
         int bonusCards = collections.get("HAND").cards[8];
@@ -247,7 +286,7 @@ class Player {
         }
     }
 
-    public static void PHASE_GIVE() throws Exception{ //TODO: compléter l'evaluation des cartes à donner en prenant en compte l'avantage qu'on perdra en jouant la carte
+    public static void PHASE_GIVE() throws Exception{ //TODO: ne pas jeter les cartes de jeu les plus importantes
 
         Map<String, Integer> throwsToEval = new HashMap<String, Integer>();
         String bestMove = "";
@@ -269,7 +308,7 @@ class Player {
         }
     }
 
-    public static void PHASE_PLAY() throws Exception{
+    public static void PHASE_PLAY() throws Exception{ //TODO: prioriser les cartes permanentes si on en a pas d'active
 
         Map<String, Integer> moves = new HashMap<String, Integer>();
 
@@ -311,7 +350,7 @@ class Player {
                     eval = EVAL_REFACTORING(move);
                     break;
                 case "WAIT":
-                    eval = 0;
+                    eval = 1;
                     break;                    
             }
 
@@ -328,20 +367,17 @@ class Player {
             }
         }
 
-        /* 
-            if(!MayIPlayThatCard(bestMove)){
-            action = WAIT();
-            }else if...
-        */
-
         if(!bestMove.equals("")){
+
+            if(bestMove.startsWith("DAILY_ROUTINE")) myTeam.permanentDailyRoutineCards++;
+            if(bestMove.startsWith("ARCHITECTURE_STUDY")) myTeam.permanentArchitectureStudyCards++;
             action = bestMove;
         }else{
             action = RANDOM();
         } 
     }
 
-    public static void PHASE_RELEASE(){ //TODO : evaluer les release sur 1) les release possibles pour l'adversaire 2) le nombre de dettes techniques qu'elle engendre
+    public static void PHASE_RELEASE(){
 
         Map<Integer, Integer> appsReadyForRelease = new HashMap<Integer, Integer>();
 
@@ -363,7 +399,7 @@ class Player {
                 //System.err.printf("app %s : missing = %s, myDebt = %s, oppDebt = %s\n", appID, missingToRelease, myTechnicalDebt, oppTechnicalDebt);
 
                 //appsReadyForRelease.put(appID, missingToRelease);
-                if(missingToRelease <= 0){
+                if(missingToRelease <= 1){
                     appsReadyForRelease.put(appID, missingToRelease);
                 }else{
                     movesToEval.put(move, movesToEval.get(move));
@@ -389,114 +425,77 @@ class Player {
             action = WAIT();
         }
     } 
-    
-    public static void PHASE_RELEASE_NEW(){
 
-        Map<String, Integer> releasesToEval = new HashMap<String, Integer>();
-
-        for(String move : possibleMoves){
-
-            if(move.startsWith("RELEASE")){
-
-                int eval = EVAL_RELEASE(move);
-
-                releasesToEval.put(move, eval);
-                movesToEval.put(move, eval);
-            
-            }else if(move.startsWith("WAIT")){
-
-                releasesToEval.put(move, 1);
-                movesToEval.put(move, 1);                
-            }
-        }
-
-        String bestMove = GetMinValue(releasesToEval);
-
-        action = bestMove;
-    }
-
-    public static void PHASE_MOVE_SIMPLE(){
+    public static void PHASE_MOVE(){ //TODO: aller vers les postes doubles si on a un daily routine actif
 
         System.err.printf("My position = %s\nOppPosition = %s\n\n", myTeam.location, oppTeam.location);
         
-        int startZone = myTeam.location;
         boolean zoneFound = false;
+        int startZone = myTeam.location;
+        int bonusZone = -1;
 
-        while(!zoneFound){
-            startZone = startZone < 7 ? startZone + 1 : 0;
-            zoneFound = 
-                GetDistance(startZone, oppTeam.location, true) > 1 && 
-                possibleMoves.contains(MOVE(startZone)) &&
-                remainingCards[startZone] > 0 && 
-                totalNeeds[startZone] > 0;
+        if(gameTurn > 0){
 
-            movesToEval.put(MOVE(startZone), zoneFound ? 1 : 0);
-        }
-        
-        action = MOVE(startZone);
-    }
+            if(myTeam.permanentDailyRoutineCards > 0){
 
-    public static void PHASE_MOVE(){ 
-
-        Map<String, Integer> moves = new HashMap<String, Integer>();
-
-        for(String move : possibleMoves){
-            if(move.split(" ")[0].equals("MOVE")){
-                int eval = EVAL_MOVE(move);
-                moves.put(move, eval);
-            }
-        }
-
-        if(moves.size() > 0){
-
-            int minEval = 9999;
-            String bestMove = "";
-
-            for(String move : moves.keySet()){
-
-                if(moves.get(move) < minEval){
-                    minEval = moves.get(move);
-                    bestMove = move;
+                while(!zoneFound){ 
+                    startZone = startZone < 7 ? startZone + 1 : 0;                
+                    bonusZone = ChooseBonusZone(startZone);
+                    zoneFound = EVAL_ZONE(startZone, bonusZone); 
                 }
+                
+                action = MOVE(startZone, bonusZone);            
+    
+            }else{
+    
+                while(!zoneFound){ 
+                    startZone = startZone < 7 ? startZone + 1 : 0;    
+                    zoneFound = EVAL_ZONE(startZone);
+                }
+                
+                action = MOVE(startZone);
+            
             }
-
-            action = bestMove;
-
+        
         }else{
-            action = RANDOM();
+            action = GetFirstMove();
         }
-    }    
+    }   
         
     // EVALUATION FUNCTIONS
 
-    public static int EVAL_RELEASE(String move){
+    public static boolean EVAL_ZONE(int zoneToMove, int bonusZone){
 
-        // 1) la release doit minimiser le nombre de dettes techniques  +1 pts
-        // 2) la release doit empecher l'adversaire de release          +10 pts
-
-        int appID = Integer.parseInt(move.split(" ")[1]);
-
-        CardCollection myHand = GetUsefullHand();
-        CardCollection oppHand = GetAllOppCards();
-
-        int missingWithMyHand = applications.get(appID).GetMissingCardsForRelease(myHand);
-        int missingWithOppHand = applications.get(appID).GetMissingCardsForRelease(oppHand);
-
-        System.err.printf("app %s : myHand %s, oppHand %s\n", PadInteger(appID, 2, false), missingWithMyHand, missingWithOppHand);
-
-        int eval = 999;
-
-        if(missingWithMyHand > missingWithOppHand && missingWithMyHand == 0){
+        int collectionCount = collections.get("AUTOMATED") != null ? collections.get("AUTOMATED").cards[zoneToMove] : 0;
         
-            eval = -999;
-        
-        }else if(missingWithMyHand < missingWithOppHand && missingWithOppHand > 0){
+        boolean check_Distance = GetDistance(zoneToMove, oppTeam.location) > 1;
+        boolean check_Remaining  = true; //remainingCards[zoneToMove] > 0;
+        boolean check_Needs = totalNeeds[zoneToMove] - collectionCount > 0;
+        boolean check_Possible = possibleMoves.contains(MOVE(zoneToMove, bonusZone));
 
-            eval = missingWithMyHand * missingWithOppHand;
-        
-        }        
+        boolean zoneFound = check_Distance && check_Remaining && check_Needs && check_Possible;
 
-        return eval;
+        movesToEval.put(MOVE(zoneToMove, bonusZone), zoneFound ? 999 : -99);
+
+        return zoneFound;
+
+    }
+
+    public static boolean EVAL_ZONE(int zoneToMove){
+
+        int collectionCount = collections.get("AUTOMATED") != null ? collections.get("AUTOMATED").cards[zoneToMove] : 0;
+        
+        boolean check_Distance = GetDistance(zoneToMove, oppTeam.location) > 1;
+        boolean check_Needs = totalNeeds[zoneToMove] - collectionCount > 0 || (zoneToMove >= DAILY_ROUTINE && zoneToMove <= CONTINUOUS_INTEGRATION);
+        boolean check_Possible = possibleMoves.contains(MOVE(zoneToMove));
+
+        System.err.printf("EVAL_%s : %s, %s, %s\n", MOVE(zoneToMove), check_Distance, check_Needs, check_Possible);
+
+        boolean zoneFound = check_Distance && check_Needs && check_Possible; 
+
+        movesToEval.put(MOVE(zoneToMove), zoneFound ? 1 : 0);
+
+        return zoneFound;       
     }
 
     public static int EVAL_THROW(String move) throws Exception{
@@ -524,99 +523,42 @@ class Player {
         return minMissingCard;                
     }
 
-    public static int EVAL_MOVE(String move){
-
-        CardCollection handTemp = GetUsefullHand();
-        
-        String[] tMove = move.split(" ");
-        int moveZoneID = Integer.parseInt(tMove[1]);
-
-        for(int i = 1; i < tMove.length; i++){
-
-            int zoneID = Integer.parseInt(tMove[i]);
-
-            if(remainingCards[zoneID] > 0){
-                handTemp.AddCard(zoneID);
-            }else{
-                handTemp.AddCard(BONUS_CARD);
-            }            
-        }
-
-        int minSpace = GetDistance(oppTeam.location, moveZoneID, true);
-
-        int coef_Length = tMove.length > 2 ? 0 : 1;
-        int coef_Space = minSpace <= 1 || minSpace == 7 ? 999 : 0;
-        int coef_Remaining = remainingCards[moveZoneID] > 0 ? 0 : 999;
-        int coef_Zone = GetMoveCoef(moveZoneID);
-        int coef_Needs = -totalNeeds[moveZoneID];
-
-        int minEval = 9999;
-        for(Application mApp : applications.values()){
-
-            int minMissingCards = mApp.GetMissingCardsForRelease(handTemp);
-           
-            int eval = (coef_Needs + coef_Zone + minMissingCards + coef_Space + coef_Remaining) * coef_Length;
-            
-            minEval = Math.min(minEval, eval);
-        }
-
-        movesToEval.put(move, minEval);
-
-        return minEval;
-    }    
-
     public static int EVAL_TRAINING(String move){
 
-        // on renvoi un entier qui correspond à 1000 divisé par (le taux de carte dette qu'on a dans notre pioche + 5) * le nombre de dette technique en main
-        // => 10% de dette, 0 cartes dettes en main : 1000 / 11 = 91
-        // => 20% de dette, 0 cartes dettes en main : 1000 / 21 = 48
-        // => 50% de dette, 0 cartes dettes en main : 1000 / 51 = 20
-        // => 80% de dette, 0 cartes dettes en main : 1000 / 81 = 13
-        
-        int eval = 1;
+        int eval = -999;
 
         CardCollection nextDraw = GetUsefullDraw();
 
-        if(nextDraw != null){
-
-            int technicalProportion = nextDraw.proportions[TECHNICAL_DEBT];
-            int technicalDebt = collections.get("HAND").cards[TECHNICAL_DEBT];
-            
-            eval = technicalProportion > 0 ? technicalDebt * (1000 / (technicalProportion + 5)) : 1000;
+        if(nextDraw != null && nextDraw.nonTechnicalDebtCardCount() > 1){
+            if(collections.get("HAND").cards[TECHNICAL_DEBT] > nextDraw.cards[TECHNICAL_DEBT] || nextDraw.cards[TECHNICAL_DEBT] == 0){
+                eval = 999;
+            }
         }
 
         movesToEval.put(move, eval);
 
-        return 24 * collections.get("HAND").cards[TECHNICAL_DEBT]; //eval;
+        return eval;
     }    
 
     public static int EVAL_CODING(String move){
 
-        // on renvoi un entier qui correspond à 1000 divisé par le taux de carte dette qu'on a dans notre pioche
-        // => 10% de dette : 1000 / 10 = 100
-        // => 20% de dette : 1000 / 20 = 50
-        // => 50% de dette : 1000 / 50 = 20
-        // => 80% de dette : 1000 / 80 = 13
-        
-        int eval = 1;
+        int eval = -999;
 
         CardCollection nextDraw = GetUsefullDraw();
 
-        if(nextDraw != null){
-
-            int technicalProportion = GetUsefullDraw().proportions[TECHNICAL_DEBT];
-            int technicalDebt = collections.get("HAND").cards[TECHNICAL_DEBT];
-            
-            eval = technicalProportion > 0 ? technicalDebt * (1000 / (technicalProportion)) : 1000;
+        if(nextDraw != null && nextDraw.nonTechnicalDebtCardCount() > 0){
+            if(collections.get("HAND").cards[TECHNICAL_DEBT] > nextDraw.cards[TECHNICAL_DEBT] || nextDraw.cards[TECHNICAL_DEBT] == 0){
+                eval = 999;
+            }
         }
 
         movesToEval.put(move, eval);
 
-        return 24 * collections.get("HAND").cards[TECHNICAL_DEBT]; //eval;
+        return eval;
     }
 
     public static int EVAL_DAILY_ROUTINE(String move){
-        int eval = 9999 * (5 - myTeam.permanentDailyRoutineCards);
+        int eval = 9999 * (1 - myTeam.permanentDailyRoutineCards);
         movesToEval.put(move, eval);
         return eval;
     }
@@ -626,12 +568,20 @@ class Player {
         int cardID = Integer.parseInt(move.split(" ")[1]);
         int eval = -9999;
 
-        if(collections.get("HAND").nonTechnicalDebtCardCount() > 2){
-            
-            if(cardID == 8){            
-                eval = 8 * 9999;
-            }else if(cardID < 8){
-                eval = 2 * totalNeeds[cardID] * 9999;
+        int automatedCards = collections.containsKey("AUTOMATED") ? collections.get("AUTOMATED").cards[cardID] : 0;
+
+        if(automatedCards > 1){
+
+            eval = -9999; 
+        
+        }else{
+
+            if(collections.get("HAND").nonTechnicalDebtCardCount() > 2){
+                if(cardID == 8){            
+                    eval = 9999;
+                }else if(cardID < 8){
+                    eval = totalNeeds[cardID] * 9999;
+                }
             }
         }
 
@@ -639,7 +589,7 @@ class Player {
         return eval;
     }
     
-    public static int EVAL_TASK_PRIORITIZATION(String move) throws Exception{
+    public static int EVAL_TASK_PRIORITIZATION_OLD(String move) throws Exception{
 
         // 1) on calcul le nombre mini de cartes necessaires pour chaque appli avec notre main actuelle, puis on stocke le mini
         // 2) on fait de meme avec une CollectionCard virtuelle, basée sur la nouvelle main faisant suite à l'échange en cours d'évaluation
@@ -690,8 +640,37 @@ class Player {
         return eval;
     }
     
+    public static int EVAL_TASK_PRIORITIZATION(String move) throws Exception{ //TODO: priporiser l'echange de cartes bonus
+
+        String[] tMove = move.split(" ");
+
+        int cardToThrow = Integer.parseInt(tMove[1]);
+        int cardToTake = Integer.parseInt(tMove[2]);
+
+        if(totalNeeds[cardToTake] == 0 || totalNeeds[cardToThrow] > 0) return -999;
+
+        CardCollection myNewHand = GetUsefullHand();
+        CardCollection myActualHand = GetUsefullHand();
+
+        myNewHand.RemoveCard(cardToThrow);
+        myNewHand.AddCard(cardToTake);
+
+        int releasableAppWithMyNewHand = myNewHand.releasableAppsCount();
+        int releasableAppWithMyActualHand = myActualHand.releasableAppsCount();
+
+        int eval = -999;
+
+        if(releasableAppWithMyNewHand > releasableAppWithMyActualHand){
+            eval = 999;
+        }
+
+        movesToEval.put(move, eval);
+
+        return eval;
+    }  
+
     public static int EVAL_ARCHITECTURE_STUDY(String move){
-        int eval = 9999 * (5 - myTeam.permanentArchitectureStudyCards);
+        int eval = 9999 * (1 - myTeam.permanentArchitectureStudyCards);
         movesToEval.put(move, eval);
         return eval;
     }
@@ -710,110 +689,122 @@ class Player {
 
     // GENERIC FUNCTIONS
 
-    public static int GetMoveCoef(int posteID){
+    public static String GetFirstMove(){
+        
+        int bestZone = 0;
 
-        int coef = 0;
+        switch(oppTeam.location){
 
-        switch(posteID){
-            case TRAINING:
-                coef = 0;
-                break;
-            case CODING:
-                coef = 0;
-                break;
             case DAILY_ROUTINE:
-                coef = -5;
+                bestZone = ARCHITECTURE_STUDY;
                 break;
+
             case TASK_PRIORITIZATION:
-                coef = 0;
+                bestZone = CODING;
                 break;
-            case ARCHITECTURE_STUDY:
-                coef = -5;
-                break;
-            case CONTINUOUS_INTEGRATION:
-                coef = -10;
-                break;
-            case CODE_REVIEW:
-                coef = 0;
-                break;
-            case REFACTORING:
-                coef = -collections.get("HAND").cards[TECHNICAL_DEBT];
-                break;
+
             default:
-                coef = 0;
+                bestZone = DAILY_ROUTINE;
         }
 
-        return coef;
+        return MOVE(bestZone);
     }
 
-    public static CardCollection GetMostProbableOpponentHand(){ //TODO: compléter cette fonction...
+    public static int ChooseBonusZone(int startZone){
 
-        CardCollection oppCards = new CardCollection(collections.get("OPPONENT_CARDS"));
+        int minBonusZone = startZone > 0 ? startZone - 1 : 7;
+        int maxBonusZone = startZone < 7 ? startZone + 1 : 0;
 
-        if(collections.containsKey("OPPONENT_AUTOMATED")){
+        if(EVAL_ZONE(startZone, minBonusZone) == false || (remainingCards[minBonusZone] <= 0 && remainingCards[maxBonusZone] > 0)) return maxBonusZone;
+        if(EVAL_ZONE(startZone, maxBonusZone) == false || (remainingCards[maxBonusZone] <= 0 && remainingCards[minBonusZone] > 0)) return minBonusZone;
 
-            int[] oppAutoCards = collections.get("OPPONENT_AUTOMATED").cards;
+        int bestZone = -1;
 
-            for(int i = 0; i < oppAutoCards.length; i++){
+        switch(startZone){
 
-                oppCards.cards[i] += oppAutoCards[i];
-            }
+            case TRAINING:
 
+                if(collections.get("HAND").technicalDebtCount() > 0 || totalNeeds[7] >= totalNeeds[1]){
+                    bestZone = 7;
+                }else{
+                    bestZone = 1;
+                }
+                break;
 
-            oppCards.ResetProportions();
+            case CODING:
+
+                if(myTeam.permanentDailyRoutineCards <= 0 || totalNeeds[2] >= totalNeeds[0]){
+                    bestZone = 2;
+                }else{
+                    bestZone = 1;
+                }
+                break;
+
+            case DAILY_ROUTINE:
+
+                if(collections.get("HAND").cards[BONUS_CARD] > 0 || totalNeeds[3] >= totalNeeds[1]){
+                    bestZone = 3;
+                }else{
+                    bestZone = 1;
+                }
+                break;
+
+            case TASK_PRIORITIZATION:
+
+                if(myTeam.permanentDailyRoutineCards <= 0){
+                    bestZone = 2;
+                }else if(myTeam.permanentArchitectureStudyCards <= 0 || totalNeeds[4] >= totalNeeds[3]){
+                    bestZone = 4;
+                }else{
+                    bestZone = 2;
+                }
+                break;
+
+            case ARCHITECTURE_STUDY:
+
+                if(collections.get("HAND").usefullCardCount(true) > 0 || totalNeeds[5] >= totalNeeds[3]){
+                    bestZone = 5;
+                }else{
+                    bestZone = 3;
+                }
+                break;
+
+            case CONTINUOUS_INTEGRATION:
+
+                if(myTeam.permanentArchitectureStudyCards <= 0 || totalNeeds[4] >= totalNeeds[6]){
+                    bestZone = 4;
+                }else{
+                    bestZone = 6;
+                }
+                break;
+
+            case CODE_REVIEW:
+
+                if(collections.get("HAND").usefullCardCount(true) > 0){
+                    bestZone = 5;
+                }else if(collections.get("HAND").technicalDebtCount() > 0){
+                    bestZone = 7;
+                }else if(totalNeeds[5] >= totalNeeds[7]){
+                    bestZone = 5;
+                }else{
+                    bestZone = 7;
+                }
+                break;
+
+            case REFACTORING:
+
+                if(totalNeeds[6] >= totalNeeds[0]){
+                    bestZone = 6;
+                }else{
+                    bestZone = 0;
+                }
+                break;
+
+            default:
+                bestZone = -1;
         }
 
-        return null;
-    }
-
-    public static CardCollection GetAllOppCards(){ //TODO: compléter cette fonction...
-
-        CardCollection oppCards = new CardCollection(collections.get("OPPONENT_CARDS"));
-
-        if(collections.containsKey("OPPONENT_AUTOMATED")){
-
-            int[] oppAutoCards = collections.get("OPPONENT_AUTOMATED").cards;
-
-            for(int i = 0; i < oppAutoCards.length; i++){
-
-                oppCards.cards[i] += oppAutoCards[i];
-            }
-
-            oppCards.ResetProportions();
-        }
-
-        return oppCards;
-    }    
-
-    public static boolean MayIPlayThatCard(String bestMove) throws Exception{
-
-        String bestMoveType = bestMove.split(" ")[0];
-        int bestMoveCardID = playType.indexOf(bestMoveType);
-
-        if(bestMoveCardID == -1){
-            return true;
-        }else{
-
-            CardCollection myActualHand = GetUsefullHand();
-            CardCollection myHandAfterPlay = GetUsefullHand();
-    
-            myHandAfterPlay.RemoveCard(bestMoveCardID);
-    
-            int missingWithMyHand = 999;
-            int missingAfterPlay = 999;
-    
-            for(Application mApp : applications.values()){
-    
-                missingWithMyHand = Math.min(missingWithMyHand, mApp.GetMissingCardsForRelease(myActualHand));
-                missingAfterPlay = Math.min(missingAfterPlay, mApp.GetMissingCardsForRelease(myHandAfterPlay));
-            }
-    
-            if(missingWithMyHand < missingAfterPlay){
-                return false;
-            }else{
-                return true;
-            }
-        }        
+        return bestZone;
     }
 
     public static int CanIReleaseAnApp(){
@@ -828,52 +819,18 @@ class Player {
         return -1;
     }
 
-    public static String GetMinValue(Map<String, Integer> mapToEval){
+    public static int GetDistance(int zoneA, int zoneB){
 
-        int minValue = Integer.MAX_VALUE;
-        String minKey = "";
+        int distance = 999;
 
-        for(String key : mapToEval.keySet()){
-
-            int val = mapToEval.get(key);
-
-            if(val < minValue){
-                minValue = val;
-                minKey = key;
-            }
+        if(zoneA != -1 && zoneB != -1){
+            distance = Math.abs(zoneA - zoneB);
+            distance = Math.min(distance, 8 - distance);
         }
 
-        return minKey;
-    }
+        //System.err.printf("distance between %s and %s = %s\n", zoneA, zoneB, distance);
 
-    public static int GetDistance(int zoneA, int zoneB, boolean ignoreAdmin){
-
-        if(!ignoreAdmin){
-            zoneA = zoneA < 0 ? 0 : zoneA;
-            zoneB = zoneB < 0 ? 0 : zoneB;
-        }
-
-        if(zoneA == -1 && zoneB == -1 && ignoreAdmin){
-            
-            return 999;
-
-        }else{
-
-            int distance = Math.abs(zoneA - zoneB);
-
-            return distance <= 4 ? distance : 8 - distance;
-        }
-    }
-
-    public static boolean IsZoneAsideOpponent(int zoneID){
-
-        int oppZoneID = oppTeam.location;
-
-        if(zoneID > -1 && oppZoneID > -1 && GetDistance(zoneID, oppZoneID, true) > 1){
-            return false;
-        }else{
-            return true;
-        }
+        return distance;
     }
 
     public static CardCollection GetUsefullHand(){
@@ -898,10 +855,42 @@ class Player {
 
         if(collections.containsKey("DRAW")){
             return collections.get("DRAW");
-        }else{
+        }else if(collections.containsKey("DISCARD")){
             return collections.get("DISCARD");
+        }else{
+            return null;
         }
     }
+
+    public static String GetMinValue(Map<String, Integer> mapToEval){
+
+        int minValue = Integer.MAX_VALUE;
+        String minKey = "";
+
+        for(String key : mapToEval.keySet()){
+            int val = mapToEval.get(key);
+            if(val < minValue){
+                minValue = val;
+                minKey = key;
+            }
+        }
+        return minKey;
+    }
+
+    public static String GetMaxValue(Map<String, Integer> mapToEval){
+
+        int maxValue = -Integer.MAX_VALUE;
+        String maxKey = "";
+
+        for(String key : mapToEval.keySet()){
+            int val = mapToEval.get(key);
+            if(val > maxValue){
+                maxValue = val;
+                maxKey = key;
+            }
+        }
+        return maxKey;
+    }    
 
     // PRINTING FUNCTIONS
 
@@ -930,6 +919,7 @@ class Player {
     public static void PrintPossibleMoves(){
 
         System.err.println("PHASE = " + gamePhase + "\n");
+        if(gamePhase.startsWith("MOVE")) System.err.printf("daily = %s, architecure = %s\n", myTeam.permanentDailyRoutineCards, myTeam.permanentArchitectureStudyCards);
         System.err.printf("myLoc : %s / oppLoc : %s\n\n", myTeam.location, oppTeam.location);
 
         for(String move : possibleMoves){
@@ -990,6 +980,26 @@ class Player {
         if(collections.containsKey(location)) collections.get(location).Print();        
     }
 
+    public static void PrintApplications(){
+
+        String[] tableToPrint = new String[11];
+
+        tableToPrint[0] = PadString("NEEDS", DISPLAY_MARGIN);
+
+        for(int i = 0; i < 10; i++){
+            tableToPrint[i+1] = PadInteger(totalNeeds[i], 2, true);
+        }
+
+        System.err.println(String.join(" ", tableToPrint) + "\n");
+
+        for(Application mApplication : applications.values()){
+            mApplication.Print();
+        }
+
+        System.err.println(" ");
+
+    }
+
     public static String ParseLocation(String mLocation){
 
         switch(mLocation){
@@ -1002,34 +1012,6 @@ class Player {
             case"HAND":                 return "HAND";
             default:                    return mLocation;
         }
-    }
-
-    public static void PrintApplications(){
-
-        String[] tableToPrint = new String[9];
-
-        tableToPrint[0] = PadString("NEEDS", DISPLAY_MARGIN);
-
-        for(int i = 0; i < CARD_TYPE_COUNT; i++){
-            tableToPrint[i+1] = PadInteger(totalNeeds[i], 2, true);
-        }
-
-        System.err.println(String.join(" ", tableToPrint) + "\n");
-
-        for(Application mApplication : applications.values()){
-
-            tableToPrint[0]= PadString("App " + mApplication.id, DISPLAY_MARGIN);
-
-            for(int j = 0; j < 8; j++){
-
-                tableToPrint[j+1] = PadInteger(mApplication.neededCards[j], 2, true);
-            }
-
-            System.err.println(String.join(" ", tableToPrint));
-        }
-
-        System.err.println(" ");
-
     }
 
     public static String PadString(String mStr, int maxWidth){
@@ -1132,6 +1114,9 @@ class Player {
             collections.put(cardsLocation, mCardCollection);
         }
 
+        remainingCards[DAILY_ROUTINE] -= (myTeam.permanentDailyRoutineCards + oppTeam.permanentDailyRoutineCards);
+        remainingCards[ARCHITECTURE_STUDY] -= (myTeam.permanentArchitectureStudyCards + oppTeam.permanentArchitectureStudyCards);
+
         allMyCards = new CardCollection(collections.get("HAND"));
         allMyCards.location = "AMYC";
 
@@ -1158,7 +1143,7 @@ class Player {
     public static void PARSE_APPLICATIONS(Scanner in){
         
         int applicationsCount = in.nextInt();
-        totalNeeds = new int[CARD_TYPE_COUNT];
+        totalNeeds = new int[10];
         
         for (int i = 0; i < applicationsCount; i++) {
             
@@ -1192,6 +1177,10 @@ class Player {
     public static String MOVE(int posteID){
         return "MOVE " + posteID;
     }
+
+    public static String MOVE(int zone1, int zone2){
+        return "MOVE " + zone1 + " " + zone2;
+    }    
 
     public static String WAIT(){
         return "WAIT";
