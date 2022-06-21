@@ -1,13 +1,6 @@
 import java.util.*;
 
-/* lose Seeds : 
-    seed=4884180411688883200
-    seed=-1860785835977721340
-    seed=6533722682535114800
-    seed=-3752517535242261500   
-*/
-
-/* Inputs :
+/* Inputs pattern :
     12
     APPLICATION 14 0 0 4 0 4 0 0 0
     APPLICATION 10 0 4 0 0 0 4 0 0
@@ -16,10 +9,10 @@ import java.util.*;
     APPLICATION 24 0 0 0 0 4 0 0 4
     APPLICATION 17 0 0 4 0 0 0 0 4
     APPLICATION 27 0 0 0 0 0 0 4 4
-    APPLICATION 5 4 0 0 0 0 0 4 0
-    APPLICATION 1 4 0 4 0 0 0 0 0
-    APPLICATION 9 0 4 0 0 4 0 0 0
-    APPLICATION 4 4 0 0 0 0 4 0 0
+    APPLICATION 5  4 0 0 0 0 0 4 0
+    APPLICATION 1  4 0 4 0 0 0 0 0
+    APPLICATION 9  0 4 0 0 4 0 0 0
+    APPLICATION 4  4 0 0 0 0 4 0 0
     APPLICATION 23 0 0 0 0 4 0 4 0
     -1 0 0 0
     -1 0 0 0
@@ -41,21 +34,30 @@ import java.util.*;
 
 class Player {
 
-    static Team myTeam;
-    static Team oppTeam;
-    static CardCollection allMyCards;
+    // PUBLIC VARIABLES
+
     static Map<String, Integer> movesToEval;
     static Map<Integer, Application> applications;
     static Map<String, CardCollection> collections;
+
     static List<String> possibleMoves;
+    static List<String> playType;
+
+    static CardCollection allMyCards; 
+
+    static Team myTeam;
+    static Team oppTeam;
+
     static int[] remainingCards;
     static int[] totalNeeds;
+    
     static String action;
-    static List<String> playType;
-    static int remainingCompetenceCards;
-  
     static String gamePhase;
-    static int gameTurn = 0;    
+    
+    static int remainingCompetenceCards;    
+    static int gameTurn = 0;
+
+    // CONSTANTS
 
     static final int TRAINING = 0;
     static final int CODING = 1;
@@ -71,6 +73,9 @@ class Player {
     static final int CARD_TYPE_COUNT = 8;
     static final int DISPLAY_MARGIN = 7;
 
+    static final int MAX_DAILY_ROUTINE_PLAYABLE = 2;
+    static final int MAX_ARCHITECTURE_PLAYABLE = 2;
+
     public static void main(String args[]) throws Exception {
 
         Scanner in = new Scanner(System.in);
@@ -78,8 +83,6 @@ class Player {
         PARSE_PLAY_TYPES();
 
         while (true) {
-
-            gamePhase = in.next(); // can be MOVE, GIVE_CARD, THROW_CARD, PLAY_CARD or RELEASE
 
             movesToEval = new HashMap<String, Integer>();
             applications = new HashMap<Integer, Application>();
@@ -129,6 +132,8 @@ class Player {
         public int[] cards;
         public int[] proportions;
 
+        // CONSTRUCTORS
+
         public CardCollection(CardCollection mCollection){
 
             location = mCollection.location;
@@ -149,6 +154,14 @@ class Player {
 
             ResetProportions();
         }
+
+        public CardCollection(String mLocation){
+            proportions = new int[CARD_TYPE_COUNT + 2];
+            cards = new int[CARD_TYPE_COUNT + 2];
+            location = mLocation;
+        }
+
+        // METHODS
 
         private void ResetProportions(){
             
@@ -265,7 +278,7 @@ class Player {
         public Application(Scanner in){
 
             neededCards = new int[8];
-            
+
             objectType = in.next();
             id = in.nextInt();
             
@@ -312,8 +325,13 @@ class Player {
         Map<String, Integer> throwsToEval = new HashMap<String, Integer>();
         int bonusCards = collections.get("HAND").cards[8];
         String bestMove = "";
+        int unNeededCard = GetCardNotNeeded();
 
-        if (bonusCards > 0){
+        if(unNeededCard > -1){
+        
+            bestMove = THROW(unNeededCard);
+        
+        }else if (bonusCards > 0){
 
             bestMove = THROW(8);
         
@@ -335,24 +353,6 @@ class Player {
         }else{
             action = RANDOM();
         }
-    }
-
-    public static boolean EVAL_THROW_NEW(int cardID){
-
-        int[] throwableCards = collections.get("HAND").cards;
-
-        boolean throwCard = false;
-
-        if(throwableCards[cardID] > 0){
-            switch(cardID){
-                case BONUS_CARD: 
-                    throwCard = true;
-                    break;
-                //case 
-            }
-        }
-
-        return throwCard;
     }
 
     public static void PHASE_GIVE() throws Exception{ //TODO: ne pas jeter les cartes de jeu les plus importantes
@@ -377,7 +377,7 @@ class Player {
         }
     }
 
-    public static void PHASE_PLAY() throws Exception{ //TODO: prioriser les cartes permanentes si on en a pas d'active
+    public static void PHASE_PLAY() throws Exception{
 
         Map<String, Integer> moves = new HashMap<String, Integer>();
 
@@ -409,9 +409,6 @@ class Player {
                     break;
                 case "REFACTORING":
                     eval = EVAL_REFACTORING(move);
-                    break;
-                case "WAIT":
-                    eval = 1;
                     break;                    
             }
 
@@ -430,25 +427,25 @@ class Player {
 
         if(!bestMove.equals("")){
 
-            int releasableApp = CanIReleaseAnApp();
+            boolean canIRelease = CanIReleaseAnApp();
             int playedCardID = GetCardID(bestMove);
 
-            if(releasableApp > -1 && playedCardID > -1 && !bestMove.startsWith("CONTINUOUS_INTEGRATION")){
+            if(canIRelease && playedCardID > -1){ //Si on peut release une app avec notre main actuelle, et que l'action à jouer est différente de WAIT
 
-                if(applications.get(releasableApp).neededCards[playedCardID] > 0){
-                    possibleMoves.add("RELEASE " + releasableApp + "(at next turn) => we dont play");
+                if(!CanIReleaseWithout(playedCardID)){ // si je ne peux pas release à 0 sans la carte je m'apprête à jouer, je force un WAIT
+                    possibleMoves.add("RELEASE A 0 AU PROCHAIN TOUR => WAIT");
                     action = WAIT();
                     return;
-                }
+                }                
             }
 
-            if(bestMove.startsWith("DAILY_ROUTINE")) myTeam.permanentDailyRoutineCards++;
-            if(bestMove.startsWith("ARCHITECTURE_STUDY")) myTeam.permanentArchitectureStudyCards++;
+            if(bestMove.startsWith("DAILY_ROUTINE"))        myTeam.permanentDailyRoutineCards++;
+            if(bestMove.startsWith("ARCHITECTURE_STUDY"))   myTeam.permanentArchitectureStudyCards++;
             
             action = bestMove;
 
         }else{
-            action = RANDOM();
+            action = WAIT();
         } 
     }
 
@@ -470,10 +467,10 @@ class Player {
 
                 //System.err.printf("app %s : missing = %s, myDebt = %s, oppDebt = %s\n", appID, missingToRelease, myTechnicalDebt, oppTechnicalDebt);
 
-                if(missingToRelease <= 1){
+                //if(missingToRelease <= 1){
                     eval =  releasableApp.releaseableByOpponent() ? missingToRelease - 100 : missingToRelease;
                     appsReadyForRelease.put(appID, eval);
-                }
+                //}
 
                 movesToEval.put(move, eval);
             }
@@ -498,103 +495,86 @@ class Player {
         }
     } 
 
-    public static void PHASE_MOVE(){
+    public static void PHASE_MOVE(){ //TODO: si un poste nous permet de release à 0, on skip tout le reste et on va vers ce poste => implémenter GetZoneAbleToRelease()
 
-        System.err.printf("My position = %s\nOppPosition = %s\n\n", myTeam.location, oppTeam.location);
-
-        boolean zoneFound = false;
         boolean ignoreRemaining = false;
+        boolean zoneFound = false;
 
         int startZone = myTeam.location;
         int bonusZone = -1;
         int cycles = 0;
 
-        if(gameTurn > 0){
+        if(gameTurn == 0){
+        
+            action = GetFirstMove();
 
-             if(myTeam.permanentDailyRoutineCards > 0){
-                
-                while(!zoneFound){
-                    
-                    ignoreRemaining = cycles > 7;
-                    
-                    startZone = startZone < 7 ? startZone + 1 : 0;                
-                    bonusZone = ChooseBonusZone(startZone);
-                    
-                    if(bonusZone == startZone){
-                        zoneFound = EVAL_ZONE(startZone, ignoreRemaining);
-                    }else{
-                        zoneFound = EVAL_ZONE(startZone, bonusZone, ignoreRemaining);
-                    }
-                    cycles++;
+        }else if(remainingCards[5] > 0 && myTeam.location < 5 && ((oppTeam.location != 5 && myTeam.permanentDailyRoutineCards > 0) || EVAL_ZONE(5, false))){
+            
+            if(myTeam.permanentDailyRoutineCards > 0){
+
+                if(EVAL_ZONE(4, true)){
+                    action = MOVE(4, 5);
+                }else if(EVAL_ZONE(5, true)){
+                    action = MOVE(5);
+                }else{
+                    action = MOVE(6, 5);
                 }
-                action = MOVE(startZone, bonusZone);
+
+            }else{
+                action = MOVE(5);
+            }
+
+        }else{
+
+            int zoneAbleToRelease = GetZoneAbleToRelease(startZone);
+
+            if(zoneAbleToRelease > -1){
+
+                action = MOVE(zoneAbleToRelease);
+
             }else{
 
-                while(!zoneFound){
-
-                    ignoreRemaining = cycles > 7;
-
-                    startZone = startZone < 7 ? startZone + 1 : 0;    
-                    zoneFound = EVAL_ZONE(startZone, ignoreRemaining);
-
-                    cycles++;
-                }                
-                action = MOVE(startZone);           
-            }       
-        }else{
-            action = GetFirstMove();
+                if(myTeam.permanentDailyRoutineCards > 0){
+                
+                    while(!zoneFound){
+                        
+                        ignoreRemaining = cycles > 7;
+                        
+                        startZone = startZone < 7 ? startZone + 1 : 0;                
+                        bonusZone = ChooseBonusZone(startZone);                    
+                        zoneFound = EVAL_ZONE(startZone, ignoreRemaining);
+    
+                        cycles++;
+                    }
+                    action = MOVE(startZone, bonusZone);
+    
+                }else{
+    
+                    while(!zoneFound){
+    
+                        ignoreRemaining = cycles > 7;
+    
+                        startZone = startZone < 7 ? startZone + 1 : 0;    
+                        zoneFound = EVAL_ZONE(startZone, ignoreRemaining);
+    
+                        cycles++;
+                    }                
+                    action = MOVE(startZone);           
+                }
+            }
         }
-    }   
+    }
         
     // EVALUATION FUNCTIONS
 
-    public static boolean EVAL_ZONE(int zoneToMove, int bonusZone, boolean ignoreRemaining){
-
-        int collectionCount = collections.get("AUTOMATED") != null ? collections.get("AUTOMATED").cards[zoneToMove] : 0;
-        
-        boolean check_Distance = GetDistance(zoneToMove, oppTeam.location) > 1;
-        boolean check_Remaining  = remainingCards[zoneToMove] > 0 || ignoreRemaining;
-        boolean check_Needs = totalNeeds[zoneToMove] - collectionCount > 0;
-        boolean check_Possible = possibleMoves.contains(MOVE(zoneToMove, bonusZone));
-
-        boolean zoneFound = check_Distance && check_Remaining && check_Needs && check_Possible;
-
-        movesToEval.put(MOVE(zoneToMove, bonusZone), zoneFound ? 999 : -99);
-
-        return zoneFound;
-
-    }
-
-    public static boolean EVAL_ZONE(int zoneToMove, boolean ignoreRemaining){
-
-        int collectionCount = collections.get("AUTOMATED") != null ? collections.get("AUTOMATED").cards[zoneToMove] : 0;
-        
-        boolean check_Remaining  = remainingCards[zoneToMove] > 0 || ignoreRemaining;
-        boolean check_Distance = GetDistance(zoneToMove, oppTeam.location) > 1;
-        boolean check_Needs = totalNeeds[zoneToMove] - collectionCount > 0 || (zoneToMove >= DAILY_ROUTINE && zoneToMove <= CONTINUOUS_INTEGRATION);
-        boolean check_Possible = possibleMoves.contains(MOVE(zoneToMove));
-
-        System.err.printf("EVAL_%s : %s, %s, %s, %s\n", MOVE(zoneToMove), check_Remaining, check_Distance, check_Needs, check_Possible);
-
-        boolean zoneFound = check_Distance && check_Remaining && check_Needs && check_Possible;
-
-        movesToEval.put(MOVE(zoneToMove), zoneFound ? 1 : 0);
-
-        return zoneFound;       
-    }
-
     public static int EVAL_THROW(String move) throws Exception{
-
-        // 1) le throw doit favoriser le jet de cartes bonus, sur le jet de compétences                 OK
-        // 2) le throw doit maximiser le nombre d'appli dispo pour release                              OK
-        // 3) le throw doit défavoriser le jet de cartes à jouer qui nous offrent un avantage certain   NOK
 
         int cardID = Integer.parseInt(move.split(" ")[1]); 
         int minMissingCard = 9999;
         
         for(Application mApp : applications.values()){
 
-            CardCollection handTemp = GetUsefullHand(); //new CardCollection(collections.get("HAND"));
+            CardCollection handTemp = new CardCollection(collections.get("HAND"));
 
             handTemp.RemoveCard(cardID);
 
@@ -643,24 +623,40 @@ class Player {
     }
 
     public static int EVAL_DAILY_ROUTINE(String move){
-        int eval = 9999 * (1 - myTeam.permanentDailyRoutineCards);
-        movesToEval.put(move, eval);
-        return eval;
+        
+/*         if(myTeam.permanentDailyRoutineCards <= 0){
+            return Integer.MAX_VALUE; // carte à jouer prioritaire si on a un solde à 0
+        }else{ */
+            int eval = 9999 * (MAX_DAILY_ROUTINE_PLAYABLE - myTeam.permanentDailyRoutineCards);
+            movesToEval.put(move, eval);
+            return eval;
+        //}
     }
 
     public static int EVAL_CONTINUOUS_INTEGRATION(String move){
 
-        int cardID = Integer.parseInt(move.split(" ")[1]);
+        // Si on a 4 bonus, et une carte X, on va pas automatiser la carte X, car il suffit de piocher une carte Y pour release une App
+        // exemple : avec ce jeu, si on pioche une des deux cartes demandées par l'app, on peut l'identifier et le release au prochain tour
+        //
+        //  AUTO    .. .. .. .. 01 .. .. .. 04 ..
+        //  HAND    .. .. .. .. .. .. .. .. .. ..
+        //  APP     .. 04 .. .. 04 .. .. ..
+        //
+        // NEEDS    .. 02 .. .. 02 .. .. .. ..
+
+        CardCollection automatedCards = collections.get("AUTOMATED");
+
         int eval = -9999;
+        int cardID = Integer.parseInt(move.split(" ")[1]);
+        int automatedCardCount = automatedCards != null ? automatedCards.cards[cardID] : 0;
+        int automatedBonus = automatedCards != null ? automatedCards.cards[BONUS_CARD] : 0;
 
-        int automatedCards = collections.containsKey("AUTOMATED") ? collections.get("AUTOMATED").cards[cardID] : 0;
-
-        if(automatedCards > 1 && cardID < 8){
+        if(automatedCardCount > 1 && cardID < 8){ // si on a déjà 2 compétences automatisés, on n'en automatise pas une 3ème
             eval = -9999;
         }else{
             if(collections.get("HAND").nonTechnicalDebtCardCount() > 0){
-                if(cardID == 8){            
-                    eval = Integer.MAX_VALUE;
+                if(cardID == 8 && automatedBonus < 6){// Voir nota ci-dessus pour le 4          
+                    eval = Integer.MAX_VALUE; // les cartes permanentes passent avant l'automatisation d'un bonus
                 }else if(cardID < 8){
                     eval = totalNeeds[cardID] * 9999;
                 }
@@ -670,59 +666,8 @@ class Player {
         movesToEval.put(move, eval);                
         return eval;
     }
-    
-    public static int EVAL_TASK_PRIORITIZATION_OLD(String move) throws Exception{
 
-        // 1) on calcul le nombre mini de cartes necessaires pour chaque appli avec notre main actuelle, puis on stocke le mini
-        // 2) on fait de meme avec une CollectionCard virtuelle, basée sur la nouvelle main faisant suite à l'échange en cours d'évaluation
-
-        int minCardsWithMyHand = 9999;
-        int minCardsWithNewHand = 9999;
-
-        String[] tMove = move.split(" ");
-
-        int cardToThrow = Integer.parseInt(tMove[1]);
-        int cardToTake = Integer.parseInt(tMove[2]);
-
-        CardCollection myNewHand = GetUsefullHand();        //new CardCollection(collections.get("HAND"));
-        CardCollection myActualHand = GetUsefullHand();     //collections.get("HAND")
-
-        myNewHand.RemoveCard(cardToThrow);
-        myNewHand.AddCard(cardToTake);
-
-        for(Application mApp : applications.values()){
-
-            int missingWithNewHand = mApp.GetMissingCardsForRelease(myNewHand);
-            int missingWithMyHand = mApp.GetMissingCardsForRelease(myActualHand);
-
-            minCardsWithNewHand = Math.min(minCardsWithNewHand, missingWithNewHand);
-            minCardsWithMyHand = Math.min(minCardsWithMyHand, missingWithMyHand);
-        }
-        
-        // 3) on renvoi un entier en fonction de la différence entre les deux valeurs mini trouvées
-
-        int absDifference = Math.abs(minCardsWithMyHand - minCardsWithNewHand);
-        int eval = 0;
-        
-        if(absDifference > 0){
-            
-            if(minCardsWithNewHand > 0){
-                int coef_sign = (minCardsWithMyHand - minCardsWithNewHand) / Math.abs(minCardsWithMyHand - minCardsWithNewHand);
-                
-                eval = coef_sign * 100 / minCardsWithNewHand;
-            }else{
-                eval = 100;
-            }
-        }else{
-            eval = 1;
-        }
-
-        movesToEval.put(move, eval);
-
-        return eval;
-    }
-    
-    public static int EVAL_TASK_PRIORITIZATION(String move) throws Exception{ //TODO: priporiser l'echange de cartes bonus
+    public static int EVAL_TASK_PRIORITIZATION(String move) throws Exception{ //TODO: Echanger avec une carte qui nous permet de release, sinon on fait rien
 
         String[] tMove = move.split(" ");
 
@@ -752,9 +697,15 @@ class Player {
     }  
 
     public static int EVAL_ARCHITECTURE_STUDY(String move){
-        int eval = 9999 * (1 - myTeam.permanentArchitectureStudyCards);
-        movesToEval.put(move, eval);
-        return eval;
+
+/*         if(myTeam.permanentArchitectureStudyCards <= 0){
+            return Integer.MAX_VALUE - 1; // carte à jouer prioritaire si on a un solde à 0, mais passe après le daily_routine
+        }else{ */
+            int eval = 9999 * (MAX_ARCHITECTURE_PLAYABLE - myTeam.permanentArchitectureStudyCards);
+            movesToEval.put(move, eval);
+            return eval;
+        //}
+
     }
 
     public static int EVAL_CODE_REVIEW(String move){
@@ -769,7 +720,82 @@ class Player {
         return eval;
     }
 
+    public static boolean EVAL_ZONE(int zoneToMove, boolean ignoreRemainingCards){
+
+        boolean check_Remaining  = remainingCards[zoneToMove] > 0 || ignoreRemainingCards;
+        boolean check_Distance = GetDistance(zoneToMove, oppTeam.location) > 1;
+        boolean check_Possible = possibleMoves.contains(MOVE(zoneToMove));
+
+        System.err.printf("EVAL_%s : %s, %s, %s\n", MOVE(zoneToMove), check_Remaining, check_Distance, check_Possible);
+
+        boolean zoneFound = check_Distance && check_Remaining && check_Possible; //&& check_Needs
+
+        movesToEval.put(MOVE(zoneToMove), zoneFound ? 1 : 0);
+
+        return zoneFound;       
+    }
+    
     // GENERIC FUNCTIONS
+
+    public static int GetCardNotNeeded(){
+
+        if(IsThrowable(TRAINING))               return TRAINING;
+        if(IsThrowable(CODING))                 return CODING;        
+        if(IsThrowable(TASK_PRIORITIZATION))    return TASK_PRIORITIZATION;
+        if(IsThrowable(ARCHITECTURE_STUDY))     return ARCHITECTURE_STUDY;
+        if(IsThrowable(REFACTORING))            return REFACTORING;
+        if(IsThrowable(DAILY_ROUTINE))          return DAILY_ROUTINE;        
+        if(IsThrowable(CODE_REVIEW))            return CODE_REVIEW;        
+        if(IsThrowable(CONTINUOUS_INTEGRATION)) return CONTINUOUS_INTEGRATION;
+
+        return -1;
+    }
+
+    public static boolean IsThrowable(int cardID){
+        return totalNeeds[cardID] <= 0 && collections.get("HAND").cards[cardID] > 0;
+    }
+
+    public static int GetZoneAbleToRelease(int startZone){
+
+        int bestPoste = -1;
+        int minScore = 1;
+        int appID = -1;
+
+        for(int i = 0; i < 8; i++){
+
+            int posteID = i;
+
+            CardCollection usefullHand = GetUsefullHand();
+            
+            if(remainingCards[posteID] > 0){
+                usefullHand.AddCard(posteID);
+            }else{
+                usefullHand.AddCard(BONUS_CARD);
+            }
+
+            for(Application app : applications.values()){
+
+                int missingToRelease = app.GetMissingCardsForRelease(usefullHand);
+
+                if(missingToRelease <= 0){
+
+                    int score = app.releaseableByOpponent() ? missingToRelease - 100 : missingToRelease;
+
+                    if(EVAL_ZONE(posteID, true) == false || (startZone > posteID && startZone >= 0)) score += 999;
+
+                    if(score < minScore){
+                        minScore = score;
+                        bestPoste = posteID;
+                        appID = app.id;
+                    }
+                }
+            }            
+        }
+
+        System.err.printf("Zone %s able to release app %s with score = %s\n", bestPoste, appID, minScore);
+
+        return bestPoste;
+    }
 
     public static String GetFirstMove(){
         
@@ -788,17 +814,6 @@ class Player {
 
         boolean[] canRelease = new boolean[10];
         int bestZone = startZone;
-
-        /* 
-            TRAINING = 0;
-            CODING = 1;
-            DAILY_ROUTINE = 2;
-            TASK_PRIORITIZATION = 3;
-            ARCHITECTURE_STUDY = 4;
-            CONTINUOUS_INTEGRATION = 5;
-            CODE_REVIEW = 6;
-            REFACTORING = 7;
-        */        
 
         switch(startZone){
 
@@ -921,81 +936,16 @@ class Player {
         return bestZone;
     }
 
-    public static int Prioritize(int zone0, int zone1, int zone2){
-
-        boolean[] canRelease = new boolean[3];
-        int bestZone = zone1;
-
-        canRelease[0] = CanCardRelease(zone0);
-        canRelease[1] = CanCardRelease(zone1);
-        canRelease[2] = CanCardRelease(zone2);
-
-        if(canRelease[0] || (!canRelease[1] && !canRelease[2] && remainingCards[zone0] > 0 && totalNeeds[zone0] >= totalNeeds[zone1] && totalNeeds[zone0] >= totalNeeds[zone2])){
-            bestZone = zone0;
-        }else if(remainingCards[zone1] > 0 && (canRelease[1] || (!canRelease[2] && totalNeeds[zone1] >= totalNeeds[zone2]))){
-            bestZone = zone1;
-        }else{
-            bestZone = zone2;
-        }
-
-        return bestZone;
-    }
-
-    public static int ChooseBonusZone_NEW(int startZone){
-
-        int bestZone = startZone;
-
-        switch(startZone){
-
-            case TRAINING:
-                bestZone = Prioritize(REFACTORING, TRAINING, CODING);
-                break;
-
-            case CODING:
-                bestZone = Prioritize(DAILY_ROUTINE, TRAINING, CODING);
-                break;
-
-            case DAILY_ROUTINE:
-                bestZone = Prioritize(DAILY_ROUTINE, CODING, TASK_PRIORITIZATION);
-                break;
-
-            case TASK_PRIORITIZATION:
-                bestZone = Prioritize(ARCHITECTURE_STUDY, DAILY_ROUTINE, TASK_PRIORITIZATION);
-                break;
-
-            case ARCHITECTURE_STUDY:
-                bestZone = Prioritize(CONTINUOUS_INTEGRATION, ARCHITECTURE_STUDY, TASK_PRIORITIZATION);
-                break;
-
-            case CONTINUOUS_INTEGRATION:
-                bestZone = Prioritize(CONTINUOUS_INTEGRATION, ARCHITECTURE_STUDY, CODE_REVIEW);
-                break;
-
-            case CODE_REVIEW:
-                bestZone = Prioritize(CONTINUOUS_INTEGRATION, REFACTORING, CODE_REVIEW);
-                break;
-
-            case REFACTORING:
-                bestZone = Prioritize(REFACTORING, CODE_REVIEW, TRAINING);
-                break;
-
-            default:
-                bestZone = startZone;
-        }
-
-        return bestZone;
-    }
-
-    public static int CanIReleaseAnApp(){
+    public static boolean CanIReleaseAnApp(){
 
         CardCollection useFullHand = GetUsefullHand();
 
         for(Application mApp : applications.values()){
 
-            if(mApp.GetMissingCardsForRelease(useFullHand) <= 0) return mApp.id;
+            if(mApp.GetMissingCardsForRelease(useFullHand) <= 0) return true;
         }
 
-        return -1;
+        return false;
     }
 
     public static int GetDistance(int zoneA, int zoneB){
@@ -1010,6 +960,23 @@ class Player {
         //System.err.printf("distance between %s and %s = %s\n", zoneA, zoneB, distance);
 
         return distance;
+    }
+
+    public static boolean CanIReleaseWithout(int cardID) throws Exception{
+
+        CardCollection handTemp = GetUsefullHand();
+        boolean canIRelease = handTemp.releasableAppsCount() > 0;
+
+        if(!canIRelease) return false;
+        
+        if(handTemp.cards[cardID] > 0){
+
+            handTemp.RemoveCard(cardID);
+            return handTemp.releasableAppsCount() > 0;
+        }
+
+        return false;
+
     }
 
     public static boolean CanCardRelease(int cardID){
@@ -1365,6 +1332,8 @@ class Player {
     }
 
     public static void PARSE_APPLICATIONS(Scanner in){
+
+        gamePhase = in.next();
         
         int applicationsCount = in.nextInt();
         totalNeeds = new int[10];
