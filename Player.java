@@ -36,10 +36,11 @@ class Player {
 
     // PUBLIC VARIABLES
 
-    static Map<String, Integer> movesToEval;
+    static Map<String, String> evalsToPrint;
     static Map<Integer, Application> applications;
     static Map<String, CardCollection> collections;
-
+    
+    static List<String> commentaries;
     static List<String> possibleMoves;
     static List<String> playType;
 
@@ -84,10 +85,11 @@ class Player {
 
         while (true) {
 
-            movesToEval = new HashMap<String, Integer>();
+            evalsToPrint = new HashMap<String, String>();
             applications = new HashMap<Integer, Application>();
             collections = new HashMap<String, CardCollection>();
             possibleMoves = new ArrayList<String>();
+            commentaries = new ArrayList<String>();
 
             PARSE_APPLICATIONS(in);
             PARSE_TEAMS(in);
@@ -273,7 +275,7 @@ class Player {
         public String objectType;
 
         public int id;
-        public int[] neededCards;       
+        public int[] neededCards;     
 
         public Application(Scanner in){
 
@@ -299,7 +301,39 @@ class Player {
             return missingToRelease - mCollection.cards[BONUS_CARD];
         }
 
-        public boolean releaseableByOpponent(){
+        public boolean isReleasable(){
+
+            int totalNeeds = totalNeededCards;
+
+            CardCollection usefullHand = GetUsefullHand();
+
+            if(GetMissingCardsForRelease(usefullHand) <= 0){
+                //System.err.printf("app %s :           %s\n", PadInteger(id, 2, false),true);
+                return true;
+            }
+
+            int[] neededCardsTemp = neededCards.clone();
+            int[] myCards = usefullHand.cards;            
+
+            for(int i = 0; i < neededCardsTemp.length; i++){
+
+                if(neededCardsTemp[i] > 0 && myCards[i] > 0){
+                    
+                    totalNeeds -= Math.max(4, 2 * myCards[i]);
+                    myCards[i] = Math.max(0, myCards[i] -  neededCardsTemp[i] / 2);                
+                }
+
+                totalNeeds -= 2 * myCards[i];
+            }
+
+            boolean canRelease = myTeam.score < 4 && totalNeeds - 2 * myCards[BONUS_CARD] <= 0;
+
+            //System.err.printf("app %s : %s - %s = %s\n", PadInteger(id, 2, false),totalNeeds, 2 * myCards[BONUS_CARD], canRelease);
+
+            return canRelease;
+        }
+
+        public boolean isReleaseableByOpponent(){
             CardCollection oppCards = GetOpponnentCards();            
             return GetMissingCardsForRelease(oppCards) <= 0;
         }
@@ -314,7 +348,10 @@ class Player {
                 tableToPrint[j+1] = PadInteger(neededCards[j], 2, true);
             }
 
-            System.err.println(String.join(" ", tableToPrint));
+            boolean isReleasable = isReleasable();
+            String strReleasable = isReleasable ? "RELEASABLE " + GetMissingCardsForRelease(GetUsefullHand()): "";
+
+            System.err.println(String.join(" ", tableToPrint) + " " + strReleasable);
         }
     }
 
@@ -459,20 +496,15 @@ class Player {
 
                 int appID = Integer.parseInt(move.split(" ")[1]);
 
-                CardCollection usefullHand = GetUsefullHand(); //collections.get("HAND");
+                CardCollection usefullHand = GetUsefullHand();
                 Application releasableApp = applications.get(appID);
 
                 int missingToRelease = releasableApp.GetMissingCardsForRelease(usefullHand);
-                int eval = missingToRelease;
+                int eval = releasableApp.isReleaseableByOpponent() ? missingToRelease - 100 : missingToRelease;;
+ 
+                appsReadyForRelease.put(appID, eval);
 
-                //System.err.printf("app %s : missing = %s, myDebt = %s, oppDebt = %s\n", appID, missingToRelease, myTechnicalDebt, oppTechnicalDebt);
-
-                //if(missingToRelease <= 1){
-                    eval =  releasableApp.releaseableByOpponent() ? missingToRelease - 100 : missingToRelease;
-                    appsReadyForRelease.put(appID, eval);
-                //}
-
-                movesToEval.put(move, eval);
+                evalsToPrint.put(move, PadEval(eval));
             }
         }
 
@@ -583,7 +615,7 @@ class Player {
             minMissingCard = Math.min(minMissingCard, missingCard);
         }
 
-        movesToEval.put(move, minMissingCard);
+        evalsToPrint.put(move, PadEval(minMissingCard));
         
         return minMissingCard;                
     }
@@ -600,7 +632,7 @@ class Player {
             }
         }
 
-        movesToEval.put(move, eval);
+        evalsToPrint.put(move, PadEval(eval));
 
         return eval;
     }    
@@ -617,18 +649,18 @@ class Player {
             }
         }
 
-        movesToEval.put(move, eval);
+        evalsToPrint.put(move, PadEval(eval));
 
         return eval;
     }
 
     public static int EVAL_DAILY_ROUTINE(String move){
-        
+
 /*         if(myTeam.permanentDailyRoutineCards <= 0){
             return Integer.MAX_VALUE; // carte à jouer prioritaire si on a un solde à 0
         }else{ */
             int eval = 9999 * (MAX_DAILY_ROUTINE_PLAYABLE - myTeam.permanentDailyRoutineCards);
-            movesToEval.put(move, eval);
+            evalsToPrint.put(move, PadEval(eval));
             return eval;
         //}
     }
@@ -663,11 +695,11 @@ class Player {
             }
         }
 
-        movesToEval.put(move, eval);                
+        evalsToPrint.put(move, PadEval(eval));                
         return eval;
     }
 
-    public static int EVAL_TASK_PRIORITIZATION(String move) throws Exception{ //TODO: Echanger avec une carte qui nous permet de release, sinon on fait rien
+    public static int EVAL_TASK_PRIORITIZATION(String move) throws Exception{ //TODO: Appliquer les consignes ci-dessous
 
         String[] tMove = move.split(" ");
 
@@ -691,9 +723,55 @@ class Player {
             eval = 999;
         }
 
-        movesToEval.put(move, eval);
+        evalsToPrint.put(move, PadEval(eval));
 
         return eval;
+    }  
+
+    public static int EVAL_TASK_PRIORITIZATION_NEW(String move) throws Exception{
+
+        String[] tMove = move.split(" ");
+
+        int cardToThrow = Integer.parseInt(tMove[1]);
+        int cardToTake = Integer.parseInt(tMove[2]);
+
+        int eval = -999;
+
+        switch(cardToThrow){
+
+            case BONUS_CARD:
+            case CODING:
+            case TRAINING:
+                if(cardToTake == CONTINUOUS_INTEGRATION || (cardToTake == DAILY_ROUTINE && myTeam.permanentDailyRoutineCards <= 0)){                    
+                    eval = 9999;             
+                }
+                break;
+            default: break;
+        }
+
+        return eval;
+    }
+
+    public static String ChooseTaskToPrioritize() throws Exception{ //TODO: Appliquer les consignes ci-dessous
+
+        // 1) prendre une carte DAILY_ROUTINE si on en a pas
+        // 2) prendre une carte CONTINUOUS_INTEGRATION si on en a pas
+        // 3) sinon appliquer l'algo déjà en place
+
+        CardCollection myHand = collections.get("HAND");
+
+        String bestMove = WAIT();
+
+        if(myHand.cards[BONUS_CARD] > 0 && remainingCards[2] > 0 || remainingCards[5] > 0){
+
+            if(myTeam.permanentDailyRoutineCards <= 0 || remainingCards[2] > 0){
+                bestMove = PRIORITIZE(8,2);
+            }else if(remainingCards[5] > 0){
+                bestMove = PRIORITIZE(8,5);
+            }// else = WAIT
+        }
+
+        return bestMove;
     }  
 
     public static int EVAL_ARCHITECTURE_STUDY(String move){
@@ -702,7 +780,7 @@ class Player {
             return Integer.MAX_VALUE - 1; // carte à jouer prioritaire si on a un solde à 0, mais passe après le daily_routine
         }else{ */
             int eval = 9999 * (MAX_ARCHITECTURE_PLAYABLE - myTeam.permanentArchitectureStudyCards);
-            movesToEval.put(move, eval);
+            evalsToPrint.put(move, PadEval(eval));
             return eval;
         //}
 
@@ -710,13 +788,13 @@ class Player {
 
     public static int EVAL_CODE_REVIEW(String move){
         int eval = 50;
-        movesToEval.put(move, eval);
+        evalsToPrint.put(move, PadEval(eval));
         return eval;
     }
 
     public static int EVAL_REFACTORING(String move){
         int eval = 10000 * collections.get("HAND").cards[TECHNICAL_DEBT];
-        movesToEval.put(move, eval);
+        evalsToPrint.put(move, PadEval(eval));
         return eval;
     }
 
@@ -726,11 +804,9 @@ class Player {
         boolean check_Distance = GetDistance(zoneToMove, oppTeam.location) > 1;
         boolean check_Possible = possibleMoves.contains(MOVE(zoneToMove));
 
-        System.err.printf("EVAL_%s : %s, %s, %s\n", MOVE(zoneToMove), check_Remaining, check_Distance, check_Possible);
-
         boolean zoneFound = check_Distance && check_Remaining && check_Possible; //&& check_Needs
 
-        movesToEval.put(MOVE(zoneToMove), zoneFound ? 1 : 0);
+        evalsToPrint.put(MOVE(zoneToMove), String.format("%S %S %S", check_Remaining, check_Distance, check_Possible));
 
         return zoneFound;       
     }
@@ -779,7 +855,7 @@ class Player {
 
                 if(missingToRelease <= 0){
 
-                    int score = app.releaseableByOpponent() ? missingToRelease - 100 : missingToRelease;
+                    int score = app.isReleaseableByOpponent() ? missingToRelease - 100 : missingToRelease;
 
                     if(EVAL_ZONE(posteID, true) == false || (startZone > posteID && startZone >= 0)) score += 999;
 
@@ -792,7 +868,7 @@ class Player {
             }            
         }
 
-        System.err.printf("Zone %s able to release app %s with score = %s\n", bestPoste, appID, minScore);
+        if(bestPoste > -1) commentaries.add(String.format("Zone %s able to release app %s with score = %s\n", bestPoste, appID, minScore));
 
         return bestPoste;
     }
@@ -1083,40 +1159,53 @@ class Player {
 
     public static void PRINT_GAME(){
         PrintHeaders();
-        PrintCollections();
-        PrintRemainingCards();
+        PrintCollections();        
         PrintApplications();
+
+        System.err.println("PHASE = " + gamePhase + "\n");
+        
+        PrintCommentaries();
         PrintPossibleMoves();
+    }
+
+    public static void PrintCommentaries(){
+
+        commentaries.add(" ");
+
+        for(String commentary : commentaries){
+            System.err.println(commentary);
+        }
+        
     }
 
     public static void PrintHeaders(){
         
         String[] tableToPrint = new String[CARD_TYPE_COUNT + 3];
 
-        tableToPrint[0] = PadString("Zones", DISPLAY_MARGIN);
+        tableToPrint[0] = PadString("ZONES", DISPLAY_MARGIN);
 
         for(int i = 0; i < tableToPrint.length-1; i++){
 
             tableToPrint[i+1] = String.format("%02d", i);
         }
 
-        System.err.println(String.join(" ", tableToPrint) + "\n");        
+        System.err.println(String.join(" ", tableToPrint)); 
+        
+        PrintRemainingCards();
+        
+        System.err.println(" ");        
     }
 
     public static void PrintPossibleMoves(){
 
-        System.err.println("PHASE = " + gamePhase + "\n");
-        if(gamePhase.startsWith("MOVE")) System.err.printf("daily = %s, architecure = %s\n", myTeam.permanentDailyRoutineCards, myTeam.permanentArchitectureStudyCards);
-        System.err.printf("myLoc : %s / oppLoc : %s\n\n", myTeam.location, oppTeam.location);
-
         for(String move : possibleMoves){
 
-            if(movesToEval.containsKey(move)){
+            if(evalsToPrint.containsKey(move)){
 
                 String[] tableToPrint = new String[2];
 
-                tableToPrint[0] = PadString(move, 25);
-                tableToPrint[1] = PadInteger(movesToEval.get(move), 3,true);
+                tableToPrint[0] = move; //PadString(move, 25);
+                tableToPrint[1] = evalsToPrint.get(move);
     
                 System.err.println(String.join(" ", tableToPrint));
 
@@ -1133,34 +1222,32 @@ class Player {
 
         String[] tableToPrint = new String[CARD_TYPE_COUNT + 1];
 
-        tableToPrint[0] = PadString("ZONES", DISPLAY_MARGIN);
+        tableToPrint[0] = PadString("REMAIN", DISPLAY_MARGIN);
 
         for(int i = 0; i < remainingCards.length; i++){
 
             tableToPrint[i + 1] = PadInteger(remainingCards[i], 2,true);            
         }
 
-        System.err.println(String.join(" ", tableToPrint) + "\n");
+        System.err.println(String.join(" ", tableToPrint));
     }
 
     public static void PrintCollections(){
 
+        CardCollection usefullHand = GetUsefullHand();
         
-        PrintCollection("PLAYED_CARDS");
-        System.err.println(" ");
-
-        allMyCards.Print();
-        PrintCollection("AUTOMATED");
-        PrintCollection("DISCARD");        
-        PrintCollection("DRAW");
-        PrintCollection("HAND");
-
-        System.err.println(" ");
-
         PrintCollection("OPPONENT_AUTOMATED");
         PrintCollection("OPPONENT_CARDS");
 
         System.err.println(" ");
+
+        PrintCollection("PLAYED_CARDS");
+        PrintCollection("DISCARD");
+        PrintCollection("DRAW");
+        usefullHand.Print();
+
+        System.err.println(" ");
+
     }
 
     public static void PrintCollection(String location){
@@ -1251,6 +1338,10 @@ class Player {
         }
     } 
     
+    public static String PadEval(int eval){
+        return PadInteger(eval, 3,true);        
+    }
+
     // PARSING FUNCTIONS
 
     public static void PARSE_PLAY_TYPES(){
@@ -1310,6 +1401,7 @@ class Player {
 
         allMyCards = new CardCollection(collections.get("HAND"));
         allMyCards.location = "AMYC";
+        collections.put(allMyCards.location, allMyCards);
 
         for(CardCollection collection : collections.values()){
 
@@ -1328,7 +1420,12 @@ class Player {
     public static void PARSE_TEAMS(Scanner in){
 
         myTeam = new Team(in, 0);
-        oppTeam = new Team(in, 1);        
+        oppTeam = new Team(in, 1);
+
+        commentaries.add(String.format("DAILY : %s", myTeam.permanentDailyRoutineCards));
+        commentaries.add(String.format("ARCHI : %s", myTeam.permanentArchitectureStudyCards));
+        commentaries.add(String.format("MYLOC : %s", myTeam.location));
+        commentaries.add(String.format("OPLOC : %s", oppTeam.location));
     }
 
     public static void PARSE_APPLICATIONS(Scanner in){
@@ -1339,8 +1436,6 @@ class Player {
         totalNeeds = new int[10];
         
         for (int i = 0; i < applicationsCount; i++) {
-            
-            
 
             Application mApplication = new Application(in);
 
@@ -1388,4 +1483,7 @@ class Player {
         return "RANDOM";
     }
 
+    public static String PRIORITIZE(int cardToThrow, int cardToTake){
+        return "TASK_PRIORITIZATION " + cardToThrow + " " + cardToTake;
+    }
 }
