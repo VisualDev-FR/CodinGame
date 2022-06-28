@@ -1,10 +1,7 @@
 import java.util.*;
 
 /* IMPROVE LIST
-
-    # Voir on peut détecter la map par symétrie
-    # implémenter du pathfinding
- 
+     
 */
 
 class Player {
@@ -22,7 +19,7 @@ class Player {
 
     // ADVANCED INPUTS
 
-    static List<int[]> pointsCoords;
+    static List<int[]> playersCoords;
 
     static boolean moveUp;
     static boolean moveDown;
@@ -33,97 +30,200 @@ class Player {
     static int myCol;
     static int possibleDir;
     static int gameTurn;
+    static int lootCount;
 
     // DATA STORAGE
 
-    static Map<String, int[]> directions;    
-    static List<String> lastMoves;
+    static Map<String, int[]> directions;  
+    static Map<String, int[]> strMoves;
     static List<String> commentaries;
 
+    static boolean[][] lootedPoints;
     static boolean[][] visitedPoints;
     static boolean[][] myPath;
     static String[][] map;
 
-    public static void main(String args[]) {
+    // MAP DRAWING CONSTS
+
+    static final String MAP_BORDER = "#";
+    static final String MAP_WALL   = " ";
+    static final String MAP_UNKOWN = " ";
+    static final String MAP_MY_POS = "@";
+    static final String MAP_ENNEMY = "!";
+    static final String MAP_LOOT   = "*";
+    static final String MAP_LOOTED = ".";
+
+    public static void main(String args[]){
         
         Scanner in = new Scanner(System.in); 
         
-        PARSE_INITIALIZE(in);
+        PARSE_INITIALIZE(in);        
 
-        while (true) {
+        while (true){
 
-            map = new String[mapWidth][mapHeight];
-
-            pointsCoords = new ArrayList<int[]>();
-            commentaries = new ArrayList<String>();
-            
             PARSE_UPDATE(in);
+            PRINT_MAP(); 
 
-            PRINT_INPUTS();
-            PRINT_MAP();
+            Border lootBorder = FindLoot(myRow, myCol);  
 
-            MOVE();
+            MOVE_BORDER(lootBorder);           
 
             gameTurn++;
         }
     }
 
+    public static void MOVE_TEMP(){
+
+        boolean moveFound = false;
+
+        while(!moveFound){
+
+            if(moveRight){
+                System.out.println("A");
+                moveFound = true;
+            }else if(moveDown){
+                System.out.println("D");
+                moveFound = true;
+            }else if(moveUp){
+                System.out.println("C");
+                moveFound = true;
+            }else if(moveLeft){
+                System.out.println("E");
+                moveFound = true;
+            }else{
+                MOVE_RANDOM();
+                moveFound = true;
+            }
+        }       
+    }    
+
     public static void MOVE(){
 
-        if(moveUp && canIMove("UP")){
-            MOVE_UP();
-        }else if(moveRight && canIMove("RH")){
-            MOVE_RIGHT();
-        }else if(moveDown && canIMove("DW")){
-            MOVE_DOWN();
-        }else if(moveLeft && canIMove("LH")){
-            MOVE_LEFT();
-        }else{
-            WAIT();
-        }        
+        boolean moveFound = false;
+        boolean anyMovePossible = false;
+
+        int minDist = 5;
+        int cycles = 0;
+
+        while(!moveFound){
+
+            if(moveRight && canIMove("RH", anyMovePossible, minDist)){
+                MOVE_RIGHT();
+                moveFound = true;
+            }else if(moveUp && canIMove("UP", anyMovePossible, minDist)){
+                MOVE_UP();
+                moveFound = true;
+            }else if(moveDown && canIMove("DW", anyMovePossible, minDist)){
+                MOVE_DOWN();
+                moveFound = true;
+            }else if(moveLeft && canIMove("LH", anyMovePossible, minDist)){
+                MOVE_LEFT();
+                moveFound = true;
+            }else if(cycles > 5){
+                MOVE_RANDOM();
+                moveFound = true;
+            }
+
+            if(anyMovePossible) minDist = 1;
+            anyMovePossible = true;
+            cycles++;
+        }       
     }
 
     // GENERIC FUNCTIONS
 
-    public static int[] GetSymetricalPoint(int row, int col){
+    public static boolean canIMove(String direction, boolean resetPath, int distanceCriteria){
 
-
-        return null;
-    }
-
-    public static boolean canIMove(String direction){
+        if(resetPath) myPath = new boolean[mapHeight][mapWidth];
 
         int[] dir = directions.get(direction);
 
         int nextRow = myRow + dir[0];
         int nextCol = myCol + dir[1];
 
-        return !myPath[nextRow][nextCol] || possibleDir == 1;
-        //return lastMoves.size() > 0 ? lastMoves.get(lastMoves.size() - 1) != direction : true;
+        int minDist = GetMinEnnemyDistance(nextRow, nextCol);        
+
+        if(!IsPointOnMap(nextRow, nextCol) || minDist <= distanceCriteria){
+            return false;
+        }else{
+            return !myPath[nextRow][nextCol] || possibleDir == 1;
+        }      
+    }
+
+    public static int GetMinEnnemyDistance(int row, int col){
+
+        int minDist = Integer.MAX_VALUE;
+
+        for(int i = 0; i < playersCoords.size() - 2; i++){
+
+            int rowEnnemy = playersCoords.get(i)[0];
+            int colEnnemy = playersCoords.get(i)[1];
+
+            minDist = Math.min(minDist, GetDistance(row, col, rowEnnemy, colEnnemy));
+        }
+
+        return minDist;
     }
 
     public static int RandBetween(int minVal, int maxVal){
         return minVal + (int)(Math.random() * ((maxVal - minVal) + 1));        
     }
 
+    public static int GetDistance(int row_A, int col_A, int row_B, int col_B){
+        return Math.abs(row_A - row_B) + Math.abs(col_A - col_B);        
+    }
+
+    static boolean IsPointOnMap(int mRow, int mCol){
+        return mRow >= 0 && mRow < mapHeight && mCol >= 0 && mCol < mapWidth;
+    }
+
     // PARSING FUNCTIONS
+
+    public static void PARSE_MAP_INIT(){
+
+        for (int i = 0; i < mapHeight; i++){
+
+            for (int j = 0; j < mapWidth; j++){
+
+                if(i == 0 || j == 0 || i == mapHeight - 1 || j == mapWidth -1){
+                    
+                    map[i][j] = MAP_BORDER;
+                    visitedPoints[i][j] = true;
+                    
+                }else{
+
+                    map[i][j] = MAP_UNKOWN;
+                }                                        
+            }
+        }        
+    }    
 
     public static void PARSE_INITIALIZE(Scanner in){
 
+        commentaries = new ArrayList<String>();
         directions = new HashMap<String, int[]>();
-        lastMoves = new ArrayList<String>();
+        strMoves = new HashMap<String, int[]>();       
 
         directions.put("RH", new int[] { 0 , 1 });
         directions.put("UP", new int[] {-1 , 0 });
         directions.put("LH", new int[] { 0 ,-1 });
-        directions.put("DW", new int[] { 1 , 0 });        
+        directions.put("DW", new int[] { 1 , 0 });
 
-        mapWidth = in.nextInt() + 1;
-        mapHeight = in.nextInt() + 1;
+        strMoves.put("A", directions.get("RH").clone());
+        strMoves.put("C", directions.get("UP").clone());
+        strMoves.put("E", directions.get("LH").clone());
+        strMoves.put("D", directions.get("DW").clone());         
+        
+        mapHeight = in.nextInt();
+        mapWidth = in.nextInt();
         pointsCount = in.nextInt();
 
-        visitedPoints = new boolean[mapWidth][mapHeight];
-        myPath = new boolean[mapWidth][mapHeight];
+        map =           new String [mapHeight][mapWidth];
+        myPath =        new boolean[mapHeight][mapWidth];
+        visitedPoints = new boolean[mapHeight][mapWidth];
+        lootedPoints =  new boolean[mapHeight][mapWidth];        
+
+        PARSE_MAP_INIT();
 
         if (in.hasNextLine()) {
             in.nextLine();
@@ -132,111 +232,193 @@ class Player {
 
     public static void PARSE_UPDATE(Scanner in){
 
+        commentaries = new ArrayList<String>();
+
+        PARSE_MOVES(in);        
+        PARSE_PLAYERS(in);
+        SCAN_MOVES();      
         
+        UPDATE_MAP();
+        ADD_PLAYERS();
 
-        for (int i = 0; i < map.length; i++){
+        myPath[myRow][myCol] = true;
+    }
 
-            for (int j = 0; j < map[0].length; j++){
+    public static void UPDATE_MAP(){
 
-                map[i][j] = visitedPoints[i][j] ? "." : " ";                
+        lootCount = 0;
+
+        for (int i = 0; i < mapHeight; i++){
+
+            for (int j = 0; j < mapWidth; j++){
+
+                boolean isWall = map[i][j].equals(MAP_WALL);
+                boolean isBorder = map[i][j].equals(MAP_BORDER);
+                boolean isLooted = lootedPoints[i][j];
+                boolean isVisited = visitedPoints[i][j];
+
+                if(!isBorder && !isWall && isVisited && !isLooted){
+
+                    VisitPoint(i, j, MAP_LOOT, true, "UPDATE_MAP (LOOT)");
+                }
+
+                if(isLooted) Lootpoint(i, j);
             }
         }
+    }
+
+    public static void PARSE_PLAYERS(Scanner in){
+
+        playersCoords = new ArrayList<int[]>();
+
+        for (int i = 0; i < pointsCount; i++) {
+
+            int col = in.nextInt(); //TODO : essayer d'inverser l'ordre des deux pour voir ce que ça fait
+            int row = in.nextInt();
+
+            playersCoords.add(new int[] {row, col});
+
+        }in.nextLine();
+
+        myRow = playersCoords.get(4)[0];
+        myCol = playersCoords.get(4)[1];
+
+        Lootpoint(myRow, myCol);
+    }
+
+    public static void PARSE_MOVES(Scanner in){
 
         input_1 = in.nextLine();
         input_2 = in.nextLine();
         input_3 = in.nextLine();
         input_4 = in.nextLine();
 
+        commentaries.add(String.format("INP : %s %s %s %s\n", input_1, input_2, input_3, input_4));        
+    }
+
+    public static void SCAN_MOVES(){
+
         moveUp =    input_1.equals("_");        
         moveRight = input_2.equals("_");  
         moveDown =  input_3.equals("_");              
-        moveLeft =  input_4.equals("_"); 
-
-        commentaries.add(String.format("DW : %s, %s\n", moveDown, canIMove("DW")));
-        commentaries.add(String.format("RH : %s, %s\n", moveRight, canIMove("RH")));
-        commentaries.add(String.format("UP : %s, %s\n", moveUp, canIMove("UP")));
-        commentaries.add(String.format("LF : %s, %s\n", moveLeft, canIMove("LH")));
-
-        for (int i = 0; i < pointsCount; i++) {
-
-            int col = in.nextInt();
-            int row = in.nextInt();
-
-            pointsCoords.add(new int[] {row, col});
-
-            String mPoint = i < 4 ? "!" : "@";
-
-            map[row][col] = mPoint;
-            visitedPoints[row][col] = true;
+        moveLeft =  input_4.equals("_");  
         
-        }in.nextLine();
-
-        myRow = pointsCoords.get(4)[0];
-        myCol = pointsCoords.get(4)[1];
-
-        PARSE_POSSIBLE_MOVES();          
-
-        myPath[myRow][myCol] = true;
-    }
-
-    public static void PARSE_POSSIBLE_MOVES(){
-
         possibleDir = 0;
 
-        if(moveUp){
-            
-            int nextRow = myRow + directions.get("UP")[0];
-            int nextCol = myCol + directions.get("UP")[1];
-
-            map[nextRow][nextCol] = ".";
-            visitedPoints[nextRow][nextCol] = true;
-            possibleDir++;
-        }
-
-        if(moveDown){
-            
-            int nextRow = myRow + directions.get("DW")[0];
-            int nextCol = myCol + directions.get("DW")[1];
-
-            map[nextRow][nextCol] = ".";
-            visitedPoints[nextRow][nextCol] = true;
-            possibleDir++;
-        }
-
-        if(moveRight){
-            
-            int nextRow = myRow + directions.get("RH")[0];
-            int nextCol = myCol + directions.get("RH")[1];
-
-            map[nextRow][nextCol] = ".";
-            visitedPoints[nextRow][nextCol] = true;
-            possibleDir++;
-        }
-
-        if(moveLeft){
-            
-            int nextRow = myRow + directions.get("LH")[0];
-            int nextCol = myCol + directions.get("LH")[1];
-
-            map[nextRow][nextCol] = ".";
-            visitedPoints[nextRow][nextCol] = true;
-            possibleDir++;
-        }         
+        possibleDir += SCAN(moveUp,     "UP");
+        possibleDir += SCAN(moveDown,   "DW");
+        possibleDir += SCAN(moveLeft,   "LH");
+        possibleDir += SCAN(moveRight,  "RH");        
         
+    } 
+
+    public static void ADD_PLAYERS(){
+
+        //playersCoords = new ArrayList<int[]>();
+
+        for (int i = 0; i < playersCoords.size(); i++) {
+
+            int row = playersCoords.get(i)[0];
+            int col = playersCoords.get(i)[1];
+
+            VisitPoint(row, col, i < 4 ? MAP_ENNEMY : MAP_MY_POS, false, "ADD_PLAYERS");        
+        }        
+    }
+
+    public static int SCAN(boolean canMove, String direction){
+
+        int addPossibleDir = 0;
+
+        int nextRow = myRow + directions.get(direction)[0];
+        int nextCol = myCol + directions.get(direction)[1];        
+
+        if(canMove){
+
+            boolean isLooted = lootedPoints[nextRow][nextCol];
+            boolean isVisited = visitedPoints[nextRow][nextCol];
+
+            if(!isVisited && !isLooted) VisitPoint(nextRow, nextCol, MAP_LOOT, true, "SCAN (" + direction + ")");            
+            addPossibleDir++;
+        
+        }else if(!visitedPoints[nextRow][nextCol]){
+            
+            VisitPoint(nextRow, nextCol, MAP_WALL, true, "SCAN (" + direction + ")");
+        }
+
+        return addPossibleDir;        
     }
 
     // PRINTING FUNCTIONS
 
+    public static void Lootpoint(int row, int col){
+
+        visitedPoints[row][col] = true;
+        lootedPoints[row][col] = true;
+
+        map[row][col] = MAP_LOOTED;
+        lootCount++;
+    }
+
+    public static void VisitPoint(int row, int col, String mChar, boolean applySymmetry, String parent){
+
+        if(!IsPointOnMap(row, col)) return;
+
+        if(applySymmetry) SymetricalVisit(row, col, mChar);
+
+        map[row][col] = mChar;        
+        visitedPoints[row][col] = true;
+    }
+
+    public static void SymetricalVisit(int row, int col, String mChar){
+
+        boolean hSym = mapHeight % 2 == 0;
+        boolean vSym = mapWidth  % 2 == 0;
+
+        if(hSym && vSym){
+
+            int symRow = HorizontalVisit(row, col, mChar);
+            int symCol = VerticalVisit(row, col, mChar);
+            map[symRow][symCol] = mChar;
+
+            visitedPoints[symRow][symCol] = true;
+
+        }else if(hSym){
+
+            HorizontalVisit(row, col, mChar);
+
+        }else if(vSym){
+
+            VerticalVisit(row, col, mChar);
+        }
+    }
+
+    public static int VerticalVisit(int row, int col, String mChar){
+
+        int symCol = mapWidth - col - 1;
+
+        map[row][symCol] = mChar;
+        visitedPoints[row][symCol] = true;
+
+        if(mChar.equals(MAP_LOOTED)) System.err.printf("symCol : [%s]\n", mChar);
+
+        return symCol;        
+    }
+
+    public static int HorizontalVisit(int row, int col, String mChar){
+
+        int symRow = mapHeight - row - 1;
+
+        map[symRow][col] = mChar;
+        visitedPoints[symRow][col] = true;
+
+        if(mChar.equals(MAP_LOOTED)) System.err.printf("symRow : [%s]\n", mChar);
+
+        return symRow;
+    }
+
     public static void PRINT_INPUTS(){
 
-        commentaries.add(String.format("INI : %s %s %s", mapWidth, mapHeight, pointsCount));
-        commentaries.add(String.format("INP : %s %s %s %s", input_1, input_2, input_3, input_4));
-
-        for(int i = 0; i < pointsCoords.size(); i++){
-
-            int[] arr = pointsCoords.get(i);
-            commentaries.add(String.format("%02d : [%02d, %02d]", i, arr[0], arr[1]));
-        }
+        System.err.printf("INI : %s %s %s\n", mapWidth, mapHeight, pointsCount);
 
         for(String commentary : commentaries){
             System.err.println(commentary);
@@ -244,12 +426,12 @@ class Player {
     }
 
     public static void PRINT_MAP(){
-        
+
         for(int i = 0; i < map.length; i++){
             System.err.println(String.join(" ", map[i]));
         }
     }
-
+    
     // PATHFINDING FUNCTIONS
 
     public static class Border{
@@ -259,126 +441,42 @@ class Player {
         private int row;
         private int col;
 
-        // CONSTRUCTORS
-
-        public Border(int pRow, int pCol, String mAction){
+        public Border(int mRow, int mCol, String mAction, Border mParent){
             
-            row = pRow;
-            col = pCol;
+            row = mRow;
+            col = mCol;
             action = mAction;
-            parentList = new ArrayList<Border>();
-            
+
+            if(mParent == null){
+                parentList = new ArrayList<Border>();
+            }else{
+                parentList = new ArrayList<Border>(mParent.parentList);
+                mParent.action = mAction;
+                parentList.add(mParent);
+            }            
         }
-
-        public Border(int pRow, int pCol, String mAction, Border mParent){
-
-            row = pRow;
-            col = pCol;
-            action = mAction;
-            parentList = new ArrayList<Border>(mParent.parentList);                
-            parentList.add(mParent);
-        }
-
-        public Border(Border mBorder){
-            row = mBorder.row;
-            col = mBorder.col;
-            action = mBorder.action;
-            parentList = new ArrayList<Border>(mBorder.parentList);
-        }
-
-        public Border clone(){
-            return new Border(this);
-        }
-
-        // METHODS
 
         public String FirstAction(){
-            return parentList.get(1).action;
+            return parentList.get(0).action;
         }
 
         public int TotalDist(){
             return parentList.size();
         }
     }
-    
-    static boolean IsPointOnMap(int row, int col){
-        return col >= 0 && col < mapWidth && row >= 0 && row < mapHeight ? true : false;
-    }
 
-    static boolean FindShortPath(int myRow, int myCol, int destRow, int destCol){
+    static Border FindLoot(int startRow, int startCol){
 
         List<Border> borders = new ArrayList<Border>();
-        borders.add(new Border(myRow, myCol, null, null));
+        borders.add(new Border(startRow, startCol, null, null));
 
-        boolean[][] investigatePoints = new boolean[mapWidth][mapHeight];
+        boolean[][] investigatePoints = new boolean[mapHeight][mapWidth];
 
-        investigatePoints[myRow][myCol] = true;
-
-        Border bestBorder = null;
-        boolean pathFound = false;
-
-        while(borders.size()>0 && !pathFound){
-
-            List<Border> bordersTemp = new ArrayList<Border>(borders);
-
-            for(Border border : bordersTemp){
-
-                borders.remove(borders.indexOf(border));                
-
-                for(String strDir : directions.keySet()){
-
-                    int[] dirCoord = directions.get(strDir);
-
-                    int nextRow = border.row + dirCoord[0];
-                    int nextCol = border.col + dirCoord[1];
-
-                    if(IsPointOnMap(nextRow, nextCol)){
-
-                        String currentChar = map[nextRow][nextCol];
-
-                        if(!investigatePoints[nextRow][nextCol] && currentChar != "#"){
-
-                            Border mNewBorder = new Border(nextRow, nextCol, strDir, border);
-
-                            if(nextRow == destRow && nextCol == destCol){
-                                pathFound = true;
-                                bestBorder = mNewBorder;
-                            }
-                            
-                            borders.add(mNewBorder);                            
-                        }
-
-                        investigatePoints[nextRow][nextCol] = true;
-                    }        
-                }
-            }
-        }
-
-        if(Math.abs(myRow - destRow) + Math.abs(myCol - destCol) == 1){
-            
-            //Move(heroX, heroY, destX, destY);
-            
-        }else if(bestBorder != null){
-            
-            System.out.println(bestBorder.FirstAction());
-            return true;
-        }
-        
-        return false;
-    }
-
-    static boolean ExploreNewRoad(int myRow, int myCol){
-
-        List<Border> borders = new ArrayList<Border>();
-        borders.add(new Border(myRow, myCol, null, null));
-
-        boolean[][] investigatePoints = new boolean[mapWidth][mapHeight];
-
-        investigatePoints[myRow][myCol] = true;
+        investigatePoints[startRow][startCol] = true;
 
         Border bestBorder = null;
 
-        while(borders.size()>0 && bestBorder == null){
+        while(borders.size() > 0 && bestBorder == null){
 
             List<Border> bordersTemp = new ArrayList<Border>(borders);
 
@@ -386,26 +484,27 @@ class Player {
 
             for(Border border : bordersTemp){
 
-                borders.remove(borders.indexOf(border));                
+                borders.remove(borders.indexOf(border));
 
-                for(String strDir : directions.keySet()){
+                for(String strDir : strMoves.keySet()){
 
-                    int[] dirCoord = directions.get(strDir);
+                    int[] dirCoord = strMoves.get(strDir);
 
                     int nextRow = border.row + dirCoord[0];
                     int nextCol = border.col + dirCoord[1];
 
                     if(IsPointOnMap(nextRow, nextCol)){
 
-                        String currentChar = map[nextRow][nextCol];
+                        boolean isRoad = map[nextRow][nextCol].equals(MAP_LOOTED);
+                        boolean isLooted = lootedPoints[nextRow][nextCol];
 
-                        if(!investigatePoints[nextRow][nextCol] && currentChar != "#"){
+                        if(!investigatePoints[nextRow][nextCol] && (isRoad || isLooted)){
 
                             Border mNewBorder = new Border(nextRow, nextCol, strDir, border);
 
                             int borderDist = mNewBorder.TotalDist();
 
-                            if(borderDist < minBorderDist && currentChar == " "){
+                            if(borderDist < minBorderDist && !isLooted){
                                 minBorderDist = borderDist;
                                 bestBorder = mNewBorder;
                             }
@@ -419,36 +518,76 @@ class Player {
             }
         }
 
-        if(bestBorder != null){
-            System.out.println(bestBorder.FirstAction());
-            return false;
-        }else{
-            return true;
-        }
+        return bestBorder;
     }
 
     // MOVE FUNCTIONS
 
+    public static void MOVE_BORDER(Border mBorder){
+
+        if(mBorder != null){                
+                
+            String strMove = mBorder.FirstAction();
+            System.out.println(strMove);
+    
+            String traducedMove = "unroconized Move : " + strMove;
+            String strCoords = String.format("[%s, %s]", mBorder.row, mBorder.col);
+    
+            switch(strMove){
+    
+                case "A":
+                    traducedMove = "MOVE BORDER : RIGHT " + strCoords;
+                    break;
+                case "E":
+                    traducedMove = "MOVE BORDER : LEFT  " + strCoords;
+                    break;            
+                case "C":
+                    traducedMove = "MOVE BORDER : UP    " + strCoords;
+                    break;            
+                case "D":
+                    traducedMove = "MOVE BORDER : DOWN  " + strCoords;
+                    break;            
+                default:
+                    break;    
+            }
+    
+            System.err.println(traducedMove);
+
+        }else{
+            MOVE();
+        }
+    }
+
+    public static void MOVE_RANDOM(){
+        
+        List<String> letters = new ArrayList<String>();
+
+        if(moveUp)      letters.add("C");
+        if(moveDown)    letters.add("D");
+        if(moveLeft)    letters.add("E");
+        if(moveRight)   letters.add("A");
+        
+        String move = letters.get(RandBetween(0, letters.size() - 1));
+        System.out.println(move);
+        System.err.println("MOVE RANDOM : " + move);
+    }
+
     public static void MOVE_RIGHT(){
-        lastMoves.add("RH");
         System.out.println("A");
         System.err.println("MOVE RIGHT");
     }
 
     public static void MOVE_LEFT(){
-        lastMoves.add("LH");
         System.out.println("E");
         System.err.println("MOVE LEFT");
     }
     
     public static void MOVE_UP(){
-        lastMoves.add("UP");
         System.out.println("C");
         System.err.println("MOVE UP");
     }
     
     public static void MOVE_DOWN(){
-        lastMoves.add("DW");
         System.out.println("D");
         System.err.println("MOVE DOWN");
     }
