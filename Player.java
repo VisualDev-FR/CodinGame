@@ -2,6 +2,9 @@ import java.util.*;
 
 /* IMPROVE LIST
      
+    # imprimer la carte autour du joueur, pour pouvoir le garder à l'oeil tout le temps
+    
+    # debugger le pathfinding
 */
 
 class Player {
@@ -38,12 +41,15 @@ class Player {
     static Map<String, int[]> strMoves;
     static List<String> commentaries;
 
+    static boolean[][] walkablePoints;
     static boolean[][] lootedPoints;
     static boolean[][] visitedPoints;
     static boolean[][] myPath;
     static String[][] map;
 
     // MAP DRAWING CONSTS
+    
+    static final int HEIGHT_PRINT = 20;
 
     static final String MAP_BORDER = "#";
     static final String MAP_WALL   = " ";
@@ -62,13 +68,15 @@ class Player {
         while (true){
 
             PARSE_UPDATE(in);
-            PRINT_MAP(); 
+            
 
             Border lootBorder = FindLoot(myRow, myCol);  
 
             MOVE_BORDER(lootBorder);           
 
             gameTurn++;
+
+            PRINT_MAP(); 
         }
     }
 
@@ -107,8 +115,8 @@ class Player {
 
         while(!moveFound){
 
-            if(moveRight && canIMove("RH", anyMovePossible, minDist)){
-                MOVE_RIGHT();
+            if(moveLeft && canIMove("LH", anyMovePossible, minDist)){
+                MOVE_LEFT();
                 moveFound = true;
             }else if(moveUp && canIMove("UP", anyMovePossible, minDist)){
                 MOVE_UP();
@@ -116,8 +124,8 @@ class Player {
             }else if(moveDown && canIMove("DW", anyMovePossible, minDist)){
                 MOVE_DOWN();
                 moveFound = true;
-            }else if(moveLeft && canIMove("LH", anyMovePossible, minDist)){
-                MOVE_LEFT();
+            }else if(moveRight && canIMove("RH", anyMovePossible, minDist)){
+                MOVE_RIGHT();
                 moveFound = true;
             }else if(cycles > 5){
                 MOVE_RANDOM();
@@ -218,10 +226,11 @@ class Player {
         mapWidth = in.nextInt();
         pointsCount = in.nextInt();
 
-        map =           new String [mapHeight][mapWidth];
-        myPath =        new boolean[mapHeight][mapWidth];
+        map = new String [mapHeight][mapWidth];
+        myPath = new boolean[mapHeight][mapWidth];
         visitedPoints = new boolean[mapHeight][mapWidth];
-        lootedPoints =  new boolean[mapHeight][mapWidth];        
+        lootedPoints = new boolean[mapHeight][mapWidth];
+        walkablePoints = new boolean[mapHeight][mapWidth];         
 
         PARSE_MAP_INIT();
 
@@ -252,17 +261,17 @@ class Player {
 
             for (int j = 0; j < mapWidth; j++){
 
-                boolean isWall = map[i][j].equals(MAP_WALL);
-                boolean isBorder = map[i][j].equals(MAP_BORDER);
+                boolean isWalkable = walkablePoints[i][j];
                 boolean isLooted = lootedPoints[i][j];
-                boolean isVisited = visitedPoints[i][j];
 
-                if(!isBorder && !isWall && isVisited && !isLooted){
+                if(isLooted){
 
-                    VisitPoint(i, j, MAP_LOOT, true, "UPDATE_MAP (LOOT)");
+                    Lootpoint(i, j);
+
+                }else if(isWalkable){
+
+                    VisitPoint(i, j, MAP_LOOT, true, "UPDATE_MAP");
                 }
-
-                if(isLooted) Lootpoint(i, j);
             }
         }
     }
@@ -276,14 +285,14 @@ class Player {
             int col = in.nextInt(); //TODO : essayer d'inverser l'ordre des deux pour voir ce que ça fait
             int row = in.nextInt();
 
-            playersCoords.add(new int[] {row, col});
+            playersCoords.add(new int[] {row, col});            
 
         }in.nextLine();
 
         myRow = playersCoords.get(4)[0];
         myCol = playersCoords.get(4)[1];
 
-        Lootpoint(myRow, myCol);
+        lootedPoints[myRow][myCol] = true;        
     }
 
     public static void PARSE_MOVES(Scanner in){
@@ -314,14 +323,13 @@ class Player {
 
     public static void ADD_PLAYERS(){
 
-        //playersCoords = new ArrayList<int[]>();
-
         for (int i = 0; i < playersCoords.size(); i++) {
 
             int row = playersCoords.get(i)[0];
             int col = playersCoords.get(i)[1];
 
-            VisitPoint(row, col, i < 4 ? MAP_ENNEMY : MAP_MY_POS, false, "ADD_PLAYERS");        
+            map[row][col] = i < 4 ? MAP_ENNEMY : MAP_MY_POS;
+            walkablePoints[row][col] = true;
         }        
     }
 
@@ -334,10 +342,7 @@ class Player {
 
         if(canMove){
 
-            boolean isLooted = lootedPoints[nextRow][nextCol];
-            boolean isVisited = visitedPoints[nextRow][nextCol];
-
-            if(!isVisited && !isLooted) VisitPoint(nextRow, nextCol, MAP_LOOT, true, "SCAN (" + direction + ")");            
+            walkablePoints[nextRow][nextCol] = true;              
             addPossibleDir++;
         
         }else if(!visitedPoints[nextRow][nextCol]){
@@ -361,7 +366,7 @@ class Player {
 
     public static void VisitPoint(int row, int col, String mChar, boolean applySymmetry, String parent){
 
-        if(!IsPointOnMap(row, col)) return;
+        if(!IsPointOnMap(row, col) || lootedPoints[row][col]) return;
 
         if(applySymmetry) SymetricalVisit(row, col, mChar);
 
@@ -378,6 +383,7 @@ class Player {
 
             int symRow = HorizontalVisit(row, col, mChar);
             int symCol = VerticalVisit(row, col, mChar);
+            
             map[symRow][symCol] = mChar;
 
             visitedPoints[symRow][symCol] = true;
@@ -396,10 +402,11 @@ class Player {
 
         int symCol = mapWidth - col - 1;
 
+        if(lootedPoints[row][symCol]) return -1;
+
         map[row][symCol] = mChar;
         visitedPoints[row][symCol] = true;
-
-        if(mChar.equals(MAP_LOOTED)) System.err.printf("symCol : [%s]\n", mChar);
+        walkablePoints[row][symCol] = mChar.equals(MAP_LOOT) || mChar.equals(MAP_LOOTED);
 
         return symCol;        
     }
@@ -408,10 +415,12 @@ class Player {
 
         int symRow = mapHeight - row - 1;
 
+        if(lootedPoints[symRow][col]) return -1;
+
         map[symRow][col] = mChar;
         visitedPoints[symRow][col] = true;
 
-        if(mChar.equals(MAP_LOOTED)) System.err.printf("symRow : [%s]\n", mChar);
+        //walkablePoints[symRow][col] = mChar.equals(MAP_LOOT) || mChar.equals(MAP_LOOTED);
 
         return symRow;
     }
@@ -427,7 +436,12 @@ class Player {
 
     public static void PRINT_MAP(){
 
-        for(int i = 0; i < map.length; i++){
+        int printHeigth = HEIGHT_PRINT;
+
+        int startRow = myRow < printHeigth / 2 ? 0 : myRow - printHeigth / 2;
+        int endRow = myRow > (mapHeight - printHeigth / 2) ? mapHeight : myRow + printHeigth / 2;
+
+        for(int i = startRow; i < endRow; i++){
             System.err.println(String.join(" ", map[i]));
         }
     }
