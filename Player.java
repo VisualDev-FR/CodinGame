@@ -37,10 +37,9 @@ class Player {
 
     // DATA STORAGE
 
-    static Map<String, String> traductions; // a hashmap containing the traductions of the differents move keyWord, in order to make the program more readable
-    static Map<String, int[]> directions;   // a hashmap containing a 2D vector of the possible directions of the player, in order to make the program more readable
-    static List<String> comments;           // a list of strings, allowing to store comments during the game, it will be printed at the end of the game
-    static List<String> mortalMoves;        // a list of all moves wich can lead to a game over
+    static Map<String, String> traductions;         // a hashmap containing the traductions of the differents move keyWord, in order to make the program more readable
+    static Map<String, int[]> directions;           // a hashmap containing a 2D vector of the possible directions of the player, in order to make the program more readable
+    static List<String> comments;                   // a list of strings, allowing to store comments during the game, it will be printed at the end of the game
 
     static boolean[][] walkablePoints;      // a 2D array of booleans, indicating if a point is walkable or not, at each game turn, we set it true if my player or an ennemy is on it
     static boolean[][] lootedPoints;        // a 2D array of booleans, indicating if a point is looted or not, at each game turn, we set it true if my player is on it
@@ -173,7 +172,7 @@ class Player {
 
         int minDist = Integer.MAX_VALUE;
 
-        for(int i = 0; i < ennemyCoords.size() - 1; i++){
+        for(int i = 0; i < ennemyCoords.size(); i++){
 
             int rowEnnemy = ennemyCoords.get(i)[0];
             int colEnnemy = ennemyCoords.get(i)[1];
@@ -314,10 +313,8 @@ class Player {
         UPDATE_MOVES(in);        
         UPDATE_PLAYERS(in);
         SCAN_MOVES();
-
-        UPDATE_MORTAL_MOVES();        
+     
         UPDATE_MAP();
-        //DRAW_MORTAL_MOVES();
         DRAW_PLAYERS();
 
         myPath[myRow][myCol] = true;
@@ -417,17 +414,6 @@ class Player {
         }
     }
 
-    public static void DRAW_MORTAL_MOVES() {
-
-        for (int i = 0; i < mortalMoves.size(); i++) {
-            
-            String move = mortalMoves.get(i);
-            int[] coord = GetNextPoint(myRow, myCol, move);
-            
-            SetMap(coord[0], coord[1], MAP_MORTAL);
-        }
-    }
-
     public static void DRAW_PLAYERS(){
 
         for (int i = 0; i < ennemyCoords.size(); i++) {
@@ -449,12 +435,12 @@ class Player {
 
     public static void SetPoint_Walkable(int row, int col){
 
-        boolean hSym = mapHeight % 2 == 0 || row == 0 || row == mapHeight - 1;
-        boolean vSym = mapWidth  % 2 == 0 || col == 0 || col == mapWidth - 1;
+        boolean hSym = (mapHeight % 2 == 0 || row == 0 || row == mapHeight - 1);
+        boolean vSym = (mapWidth  % 2 == 0 || col == 0 || col == mapWidth - 1) && col != mapWidth / 2 && col != mapWidth / 2 - 1;
 
         walkablePoints[row][col] = true;
 
-        if(hSym && vSym){
+/*         if(hSym && vSym){
 
             int[] aSymPoint = Get_axisSym(row, col);
             walkablePoints[aSymPoint[0]][aSymPoint[1]] = true;
@@ -468,7 +454,7 @@ class Player {
 
             int[] vSymPoint = Get_vSym(row, col);
             walkablePoints[vSymPoint[0]][vSymPoint[1]] = true;
-        }
+        } */
     }
 
     public static void SetPoint_Looted(int row, int col){
@@ -553,12 +539,12 @@ class Player {
         public String toString(){
             
             String[] parentCoords = new String[parentList.size()];
-            
-            for(Border parent : parentList){
-                parentCoords[parent.TotalDist() - 1] = String.format("[%s, %s]", parent.row, parent.col);
+
+            for (int i = 0; i < parentList.size(); i++) {
+                parentCoords[parentList.size() - i - 1] = String.format("[%s, %s]", parentList.get(i).row, parentList.get(i).col);
             }
 
-            return String.join(" -> ", parentCoords);
+            return String.join(" <- ", parentCoords);
         }
     }
 
@@ -590,20 +576,20 @@ class Player {
 
                     int minDist = GetMinEnnemyDistance(nextRow, nextCol);
 
-                    //Border worstEnnemyPath = GetCloserEnnemyPath(nextRow, nextCol);
-                    //boolean isDangerous = worstEnnemyPath == null ? false : worstEnnemyPath.TotalDist() <= border.TotalDist();
-
-                    if(IsPointOnMap(nextRow, nextCol) && minDist > 0){ //&& !isDangerous){                        
+                    if(IsPointOnMap(nextRow, nextCol) && minDist > 1){
 
                         boolean isWalkable = walkablePoints[nextRow][nextCol];
                         boolean isLooted = lootedPoints[nextRow][nextCol];
-                        boolean mortalMove = mortalMoves.contains(direction);
 
-                        if(!investigatePoints[nextRow][nextCol] && isWalkable && !mortalMove){
+                        if(!investigatePoints[nextRow][nextCol] && isWalkable){
 
                             Border mNewBorder = new Border(nextRow, nextCol, direction, border);
 
-                            if(!isLooted){
+                            List<int[]> ennemyCoordsTemp = simulateNextEnnemyPositions(nextRow, nextCol, mNewBorder.TotalDist());
+
+                            boolean canEscape = CanIRun(nextRow, nextCol, ennemyCoordsTemp);
+
+                            if(!isLooted && canEscape){
                                 bestBorder = mNewBorder;
                             }
                             
@@ -619,27 +605,28 @@ class Player {
         return bestBorder;
     }
 
-    public static List<int[]> simulateNextEnnemyPositions(int nbTurns){
+    public static List<int[]> simulateNextEnnemyPositions(int myPlayRow, int myPlayerCol, int nbTurns){
 
         // we simulate the positions of all the ennemies after nbTurns, and we return a list of int[], where each int[] is the next position of the ennemy
 
         List<int[]> simActualCoords = new ArrayList<int[]>(ennemyCoords);
-        List<int[]> simLastCoords = new ArrayList<int[]>(lastEnnemyCoords);
+        List<int[]> simLastCoords = new ArrayList<int[]>(lastEnnemyCoords != null ? lastEnnemyCoords : ennemyCoords);
 
         for(int i = 0; i < nbTurns; i++){
 
             for(int j = 0; j < simActualCoords.size(); j++){
 
-                int[] ennemyCoord = simActualCoords.get(j);
-                //int[] nextCoord = GetNextEnnemyPosition(ennemyIndex)
+                int[] actualEnnemyCoord = simActualCoords.get(j);
+                int[] lastEnnemyCoord = simLastCoords.get(j);
 
-                //simActualCoords.set(j, nextCoord);
+                int[] nextCoord = GetNextEnnemyPosition(actualEnnemyCoord[0], actualEnnemyCoord[1], lastEnnemyCoord[0], lastEnnemyCoord[1]);
+
+                simLastCoords.set(j, actualEnnemyCoord);
+                simActualCoords.set(j, nextCoord);
             }
-
-            simLastCoords = new ArrayList<int[]>(simActualCoords);            
         }
         
-        return null;
+        return simActualCoords;
     }    
 
     public static int[] GetNextEnnemyPosition(int ennemyRow, int ennemyCol, int lastEnnemyRow, int lastEnnemyCol){
@@ -852,68 +839,19 @@ class Player {
 
     // MORTAL MOVES FUNCTIONS
 
-    public static List<String> UPDATE_MORTAL_MOVES(){ // return a list of Strings (A, E, C, or D)
+    public static boolean isThereEnnemyAt(int row, int col, List<int[]> ennemyCoords){
 
-        mortalMoves = new ArrayList<String>();
-
-        for(String direction : directions.keySet()){
-
-            if(isMortalMove(direction)) mortalMoves.add(direction);
-        }
-
-        return mortalMoves;
-    }
-
-    public static boolean isMortalMove(String direction){
-
-        List<int[]> nextEnnemyCoords = new ArrayList<int[]>();
-
-        for (int i = 0; i < ennemyCoords.size(); i++){
-
-            int[] myNextPoint = GetNextPoint(myRow, myCol, direction);
-        
-            int myNextRow = myNextPoint[0];
-            int myNextCol = myNextPoint[1];            
-
-            int ennemyRow = GetEnnemyRow(i);
-            int ennemyCol = GetEnnemyCol(i);
-
-            if(ennemyRow == myNextRow && ennemyCol == myNextCol){
-
-                // if we move in that direction, we will be in the same place as the ennemy so we will die
-                
-                comments.add(String.format("%s [%s, %s]: ennemyPoint", traduce(direction), myNextRow, myNextCol));
-                return true;
+        for(int[] ennemyCoord : ennemyCoords){
             
-            }else{
+            int ennemyRow = ennemyCoord[0];
+            int ennemyCol = ennemyCoord[1];
 
-                int[] nextEnnemyCoord = GetNextEnnemyPosition(i);
-
-                ennemyRow = nextEnnemyCoord[0];
-                ennemyCol = nextEnnemyCoord[1];
-
-                if(ennemyRow == myNextRow && ennemyCol == myNextCol){  
-                    
-                    // if we move in that direction, we will be in the same place as the ennemy so we will die
-                    
-                    comments.add(String.format("%s [%s, %s]: ennemyPoint moving at nextTurn", traduce(direction), myNextRow, myNextCol));
-                    return true;
-                }else{
-                    
-                    // we create a list of ennemy coordinates wich will be used as startpoint to simulate the ennemy movements and see if we can escape from my actual position
-
-                    nextEnnemyCoords.add(nextEnnemyCoord);
-                }
+            if(ennemyRow == row && ennemyCol == col){
+                return true;
             }
-        }
+        }   
 
-        // if any return true, we simulate the ennemy movements and see if we can escape from my actual position
-        
-        boolean canRun = CanIRun(myRow, myCol, nextEnnemyCoords);
-
-        comments.add(String.format("%s [%s, %s]: canRun = %s", traduce(direction), myRow, myCol, canRun));
-
-        return !canRun;
+        return false;        
     }
 
     public static boolean CanIRun(int startRow, int startCol, List<int[]> nextEnnemyCoords){
@@ -930,8 +868,6 @@ class Player {
         while(borders.size() > 0 && bestBorder == null){
 
             // at each turn, the duplicate nextEnnemyCoords, in order to keep the last movements of the ennemies and be able to calculate the ennemies directions
-
-            List<int[]> lastEnnemyCoords = new ArrayList<int[]>(nextEnnemyCoords);
 
             List<Border> bordersTemp = new ArrayList<Border>(borders);
 
@@ -950,13 +886,9 @@ class Player {
                         
                         // we simulate the ennemy movements and see if there is an ennemy on my Next Position
 
-                        nextEnnemyCoords = simulateNextEnnemyPositions(border.row, border.col, nextEnnemyCoords, lastEnnemyCoords);
-
                         boolean isWalkable = walkablePoints[myNextRow][myNextCol];
                         boolean isLooted = lootedPoints[myNextRow][myNextCol];  
                         boolean isEnnemy = isThereEnnemyAt(myNextRow, myNextCol, nextEnnemyCoords);
-
-                        //if(startRow == 19 && startCol == 16) comments.add(String.format("ennemy at [%s, %S] = %s, to escape from [%s, %s]", myNextRow, myNextCol, isEnnemy, startRow, startCol));
 
                         if(!investigatePoints[myNextRow][myNextCol] && isWalkable && !isEnnemy){
 
@@ -980,110 +912,6 @@ class Player {
         return bestBorder != null;
     }
 
-    public static List<int[]> simulateNextEnnemyPositions(int myRow_, int myCol_, List<int[]> actualEnnemyCoords, List<int[]> lastEnnemyCoords){
-
-        // we simulate the positions of all the ennemies, and we return a list of int[], where each int[] is the next position of the ennemy
-
-        List<int[]> simulatedCoords = new ArrayList<int[]>();
-
-        for (int i = 0; i < actualEnnemyCoords.size(); i++){            
-
-            int minDistanceFromMe = Integer.MAX_VALUE;
-
-            // we read the actual and last positions of the ennemy at the index i
-            
-            int lastEnnemyRow = lastEnnemyCoords.get(i)[0];
-            int lastEnnemyCol = lastEnnemyCoords.get(i)[1];
-
-            int ennemyRow = actualEnnemyCoords.get(i)[0];
-            int ennemyCol = actualEnnemyCoords.get(i)[1];            
-            
-            int[] nextEnnemyCoord = new int[]{ennemyRow, ennemyCol};
-
-            String ennemyDirection = GetDirection(lastEnnemyRow, lastEnnemyCol, ennemyRow, ennemyCol);
-
-            for(String direction : directions.keySet()){
-
-                // for each direction, we search the point where the ennemy will be the nearest of my player, and we check if it is walkable
-
-                int[] nextEnnemyPosition = GetNextPoint(ennemyRow, ennemyCol, direction);
-                
-                int nextEnnemyRow = nextEnnemyPosition[0];
-                int nextEnnemyCol = nextEnnemyPosition[1];
-                
-                if(walkablePoints[nextEnnemyRow][nextEnnemyCol]){
-
-                    // if we can walk on that point, we check if it is the nearest of my player
-
-                    int distanceFromMe = GetDistance(nextEnnemyRow, nextEnnemyCol, myRow_, myCol_);                
-
-                    boolean closerDistance = distanceFromMe < minDistanceFromMe;
-                    boolean followingDirection = direction.equals(ennemyDirection);
-                    boolean sameDistance = distanceFromMe == minDistanceFromMe && followingDirection;
-                    
-                    // if it is the nearest of my player, or if the ennemy is following the same direction and it is the same distance as the previous ennemy, we keep it
-
-                    if(closerDistance || sameDistance){
-                        nextEnnemyCoord = nextEnnemyPosition;   
-                        minDistanceFromMe = distanceFromMe;
-                    }
-                }
-            }
-            
-            // if we found a point, we add it to the list of simulated ennemies positions
-
-            simulatedCoords.add(nextEnnemyCoord);
-        }
-        
-        return simulatedCoords;
-    }
-    
-    public static int[] GetNextEnnemyPosition(int ennemyIndex){
-
-        int minDistance = Integer.MAX_VALUE;
-
-        int[] nextPosition = ennemyCoords.get(ennemyIndex);
-  
-        int ennemyRow = GetEnnemyRow(ennemyIndex);
-        int ennemyCol = GetEnnemyCol(ennemyIndex);
-
-        for(String direction : directions.keySet()){
-
-            int[] nextPoint = GetNextPoint(ennemyRow, ennemyCol, direction);
-            
-            int nextRow = nextPoint[0];
-            int nextCol = nextPoint[1];
-            
-            int distance = GetDistance(nextRow, nextCol, myRow, myCol);
-
-            boolean closerDistance = distance < minDistance;
-            boolean followingDirection = direction.equals(GetEnnemyDirection(ennemyIndex));
-            boolean sameDistance = distance == minDistance && followingDirection && minDistance == Integer.MAX_VALUE;
-
-            if(walkablePoints[nextRow][nextCol] && closerDistance || sameDistance){
-                nextPosition = nextPoint;   
-                minDistance = distance;
-            }
-        }
-        
-        return nextPosition;
-    }    
-
-    public static boolean isThereEnnemyAt(int row, int col, List<int[]> ennemyCoords){
-
-        for(int[] ennemyCoord : ennemyCoords){
-            
-            int ennemyRow = ennemyCoord[0];
-            int ennemyCol = ennemyCoord[1];
-
-            if(ennemyRow == row && ennemyCol == col){
-                return true;
-            }
-        }   
-
-        return false;        
-    }
-
     // MOVE FUNCTIONS
 
     public static void MOVE_BORDER(Border mBorder){
@@ -1100,10 +928,6 @@ class Player {
             System.out.println(strMove);
 
             // we add comments to the move description to make it easier to understand
-
-            for (int i = 0; i < ennemyCoords.size() - 1; i++) {
-                comments.add(String.format("ENNEMY [%02d] : %s [%s, %s] -> %s", i, traduce(GetEnnemyDirection(i)), ennemyCoords.get(i)[0], ennemyCoords.get(i)[1], Arrays.toString(GetNextEnnemyPosition(i))));
-            }
 
             comments.add(String.format("\n%s = MOVE BORDER : %s", traduce(strMove), mBorder.toString()));
 
@@ -1190,7 +1014,7 @@ class Player {
 
     public static void PRINT_COMMENTS(){
 
-        //System.err.printf("INI : %s %s %s\n", mapWidth, mapHeight, pointsCount);
+        System.err.printf("INI : %s %s %s\n", mapWidth, mapHeight, pointsCount);
         System.err.printf("my position = [%s, %s]\n\n", myRow, myCol);
 
         for(String comment : comments){
