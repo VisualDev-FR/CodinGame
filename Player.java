@@ -1,18 +1,20 @@
+import java.time.ZoneId;
 import java.util.*;
 
-/*  IMPROVE LIST
+/*  
 
-    * analyser la possibilité de donner une carte à l'adversaire pour looter du bonus, attention on ne peut pas donner de bonus a l'adversaire, il suffit de voir si on a pas de carte 5
-    * si plusieurs releases sont à -100, on va choisir celle qui a le plus de cartes automatisées par l'adversaire, cela revient à faire comme dans la phase play et à évaluer les releases en deux fois
-    * dans le GetCardToThrow, prendre en compte l'avantage qu'on peut donner à l'adversaire
-    * faire une simulation des coups jouables pour accelerer le bonus_looting
-    * revoir l'evaluation des apps releasable par l'adversaire, en priorisant les releases qui ont le plus de carte automatisées par l'adversaire
+    # IMPROVE LIST
+
+    * retirer certains déplacement si on a pas de cartes compétences en main, car sinon on va perdre un tour (ex : si on va sur 3 ou 5 sans carte à prioriser, à automatiser on ne pourra pas jouer et on perdra un tour)
+    * dans GetZoneAbleToRelease(), renvoyer toute les zones capables de release, et faire l'évaluation en dehors de la méthode
+    * dans la phase PLAY_RELEASE, prendre la décision de jouer ou d'attendre dans une méthode spécifique
+    * améliorer la phase MOVE_RELEASE
+
+    # BUG REPORT
+    
+    * BOSS BLUE / seed=-5943367980926338000 / mauvais move au tour 56
 
 */
-
-/* BUG REPORT
-        BOSS BLUE / seed=-5943367980926338000 / mauvais move au tour 56
-    */
 
 class Player {
 
@@ -43,6 +45,7 @@ class Player {
     
     static int remainingCompetenceCards;    
     static int gameTurn;
+    static int cycles;
 
     // CONSTANTS
 
@@ -75,7 +78,7 @@ class Player {
     static final int MAX_AUTOMATED_COMPETENCE = 1;
     static final int MIN_NEED_TO_AUTOMATE = 4;      // if automation doesnot affect the current release and is needed for other release, it will allow the remove one card for the opponent
 
-    static final int MAX_TO_RELEASE = 99;
+    static final int MAX_TO_RELEASE = 4;
 
     public static void main(String args[]) throws Exception {
 
@@ -111,6 +114,8 @@ class Player {
             }
 
             PRINT_GAME();
+
+            if(gamePhase == "MOVE") COUNT_CYCLES(action);
 
             System.out.println(action);
             
@@ -213,7 +218,15 @@ class Player {
 
             for(Application mApp : applications.values()){
 
-                boolean debtIsAcceptable = mApp.GetMissingCardsForRelease(AddAutomatedCards(this)) <= (withDebt ? MAX_TO_RELEASE : 0);
+                boolean debtIsAcceptable = false;
+
+                int missingToRelease = mApp.GetMissingCardsForRelease(this);
+                
+                if(withDebt){
+                    debtIsAcceptable = missingToRelease <= MAX_TO_RELEASE;
+                }else{
+                    debtIsAcceptable = debtIsNull(missingToRelease);
+                }
 
                 if(debtIsAcceptable) releasableApps++;
             }
@@ -470,12 +483,7 @@ class Player {
 
     public static void PHASE_MOVE_RELEASE() throws Exception{
 
-        boolean ignoreRemaining = false;
-        boolean zoneFound = false;
-
         int startZone = myTeam.location;
-        int bonusZone = -1;
-        int cycles = 0;
 
         if(gameTurn == 0){
 
@@ -483,54 +491,133 @@ class Player {
 
         }else{
 
-            int zoneAbleToRelease = GetZoneAbleToRelease(startZone, myTeam.score < 4); //TODO: valider ou non le forcing du false dans le withDebt
+            Map<String, Integer> zoneAbleToRelease = GetZoneAbleToRelease(startZone, myTeam.score < 4); //TODO: valider ou non le forcing du false dans le withDebt
 
-            if(zoneAbleToRelease > -1){
+            if(zoneAbleToRelease.size() > 0){
+
+                int minMissingToRelease = Integer.MAX_VALUE;
+                int bestZone = Integer.parseInt(GetNextMoveForRelease().split(" ")[1]);
     
-                action = MOVE(zoneAbleToRelease); // TODO: complexifier un peu ça, si on a un daily routine, on vient se mettre à côté
-                
-                int minSideZone = zoneAbleToRelease > 0 ? zoneAbleToRelease - 1 : 7;
-                int maxSideZone = zoneAbleToRelease < 7 ? zoneAbleToRelease + 1 : 0;
-    
-                if(myTeam.permanentDailyRoutineCards > 0){
-    
-                    if(EVAL_ZONE(minSideZone, true)){
+                for(String strKey : zoneAbleToRelease.keySet()){
+
+                    int zoneID = Integer.parseInt(strKey.split(":")[0]);
+                    int appID = Integer.parseInt(strKey.split(":")[1]);
+                    int missingToRelease = zoneAbleToRelease.get(strKey);
+
+                    missingToRelease += applications.get(appID).isReleaseableByOpponent() ? -100 : 0;
+
+                    boolean canIgive = EVAL_ZONE(zoneID, true) || myTeam.score == 4 || zoneAbleToRelease.size() == 1;
+
+                    if(missingToRelease < minMissingToRelease && canIgive){
+                        
+                        bestZone = zoneID;
+                        minMissingToRelease = missingToRelease;
                     
-                        action = MOVE(minSideZone, zoneAbleToRelease);
+                    }else if(missingToRelease == minMissingToRelease && zoneID < bestZone && canIgive){
+
+                        bestZone = zoneID;
                     
-                    }else if(EVAL_ZONE(zoneAbleToRelease, true)){
-                    
-                        action = MOVE(zoneAbleToRelease);
-                    
-                    }else{
-                    
-                        action = MOVE(maxSideZone, zoneAbleToRelease);
+                    }else if(missingToRelease > minMissingToRelease && !EVAL_ZONE(bestZone, true) && EVAL_ZONE(zoneID, true)){
+
+                        bestZone = zoneID;
                     }
-    
-                }else{
-    
-                    action = MOVE(zoneAbleToRelease);
                 }
+
+                action = MOVE(bestZone);
     
             }else{
     
                 comments.add("Any zone able to release");
-    
-                while(!zoneFound){
+
+                int autoBonus = collections.containsKey("AUTOMATED") ? collections.get("AUTOMATED").cards[8] : 0;
+
+                if(myTeam.permanentDailyRoutineCards == 0){ // on va essayer de récup un DAILY le plus vite possible, et de récup un max de BONUS / de CONTINUOUS
+
+                    if(EVAL_ZONE(CONTINUOUS_INTEGRATION, false) && (GetMyHand().bonusCardCount() > 0 && myTeam.location < 5)){
+                        
+                        action = MOVE(CONTINUOUS_INTEGRATION);
                     
-                    ignoreRemaining = cycles > 7;
+                    }else if(GetMyHand().nonTechnicalDebtCardCount() > 0 && EVAL_ZONE(TASK_PRIORITIZATION, false) && myTeam.location < 3){
+
+                        action = MOVE(TASK_PRIORITIZATION);
+
+                    }else if(allMyCards.bonusCardCount() - autoBonus <= 0 && EVAL_ZONE(CODE_REVIEW, false) && myTeam.location < 6){
+
+                        action = MOVE(CODE_REVIEW);
+
+                    }else{
+
+                        action = GetNextMoveForRelease();
+                    }
+
+                }else if(EVAL_ZONE(CONTINUOUS_INTEGRATION, false) && (GetMyHand().bonusCardCount() > 0 && myTeam.location <= 5)){
+
+                    if(EVAL_ZONE(ARCHITECTURE_STUDY, true)){
+                        action = MOVE(ARCHITECTURE_STUDY, CONTINUOUS_INTEGRATION);
+                    }else if(EVAL_ZONE(TASK_PRIORITIZATION, true)){
+                        action = MOVE(CONTINUOUS_INTEGRATION);
+                    }else if(EVAL_ZONE(CODE_REVIEW, true)){
+                        action = MOVE(CODE_REVIEW, CONTINUOUS_INTEGRATION);
+                    }
+
+                }else if(remainingCards[3] > 0 && oppTeam.location != 3 && GetMyHand().nonTechnicalDebtCardCount() > 0 && myTeam.location <= 3){
+    
+    
+                    if(EVAL_ZONE(DAILY_ROUTINE, true)){
+                        action = MOVE(DAILY_ROUTINE, TASK_PRIORITIZATION);
+                    }else if(EVAL_ZONE(TASK_PRIORITIZATION, true)){
+                        action = MOVE(TASK_PRIORITIZATION);
+                    }else if(EVAL_ZONE(ARCHITECTURE_STUDY, true)){
+                        action = MOVE(ARCHITECTURE_STUDY, TASK_PRIORITIZATION);
+                    }
+             
+    
+                }else if(remainingCards[6] > 0 && allMyCards.cards[CODE_REVIEW] <= 0 && allMyCards.bonusCardCount() - autoBonus <= 0 && oppTeam.location != 6){ // if we dont have any bonus in hand or in draw, we try to get a code review as fast as possible
+
+                    if(EVAL_ZONE(CONTINUOUS_INTEGRATION, true)){
+                        action = MOVE(CONTINUOUS_INTEGRATION, CODE_REVIEW);
+                    }else if(EVAL_ZONE(CODE_REVIEW, true)){
+                        action = MOVE(CODE_REVIEW);
+                    }else if(EVAL_ZONE(REFACTORING, true)){
+                        action = MOVE(REFACTORING, CODE_REVIEW);
+                    }
+    
+                }else{ 
                     
-                    startZone = startZone < 7 ? startZone + 1 : 0;                
-                    bonusZone = ChooseBonusZoneForRelease(startZone);                    
-                    zoneFound = EVAL_ZONE(startZone, ignoreRemaining);
-    
-                    cycles++;
-                }
-    
-                action = MOVE(startZone, bonusZone);            
-            }
-        
+                    action = GetNextMoveForRelease();
+                }                      
+            }       
         }
+    }
+
+    public static String GetNextMoveForRelease(){
+
+        boolean ignoreRemaining = false;
+        boolean zoneFound = false;
+
+        int startZone = myTeam.location;
+        int bonusZone = -1;
+        int cycles = 0;
+    
+        while(!zoneFound){
+                    
+            ignoreRemaining = cycles > 7;
+            startZone = startZone < 7 ? startZone + 1 : 0;
+
+            boolean blankMove = ignoreRemaining || myTeam.permanentDailyRoutineCards > 0 || GetMyHand().nonTechnicalDebtCardCount() > 0 || (startZone != 3 && startZone != 5);
+
+            bonusZone = ChooseBonusZoneForRelease(startZone);
+            zoneFound = EVAL_ZONE(startZone, ignoreRemaining) && blankMove;
+            
+            cycles++;
+        }
+
+        comments.add("zone choosen = " + startZone);
+
+        action = MOVE(startZone, bonusZone); 
+        
+        return action;
+        
     }
     
     public static void PHASE_PLAY_RELEASES() throws Exception{
@@ -539,14 +626,14 @@ class Player {
         Map<String, Integer> taskActions = new HashMap<String, Integer>();
         Map<String, Integer> contActions = new HashMap<String, Integer>();
 
-        int priority_TRAINING = 1;
-        int priority_CODING = 1;
-        int priority_CODE_REVIEW = 2;
-        int priority_REFACTORING = 3;
-        int priority_CONTINUOUS = 4;
-        int pirority_TASK = 4;   
-        int priority_DAILY = 5; 
-        int priority_ARCHITECTURE = 5;       
+        int priority_TRAINING = 2;
+        int priority_CODING = 2;        
+        int priority_CONTINUOUS = GetMyHand().bonusCardCount() > 0 ? 1 : 3;
+        int priority_CODE_REVIEW = allMyCards.bonusCardCount() - collections.get("AUTOMATED").cards[8] <= 0 ? 1 : 4;
+        int priority_REFACTORING = 5;        
+        int priority_TASK = 5;   
+        int priority_DAILY = myTeam.score == 4 ? 2 : 6; 
+        int priority_ARCHITECTURE = myTeam.score == 4 ? 2 : 6;
               
 
         action = WAIT();
@@ -568,26 +655,27 @@ class Player {
                     break;                    
                 case "TASK_PRIORITIZATION":
                     taskActions.put(move, EVAL_TASK_PRIORITIZATION(move));
+                    //eval = Integer.MAX_VALUE / priority_TASK;                   //FLAG 
                     break;
                 case "ARCHITECTURE_STUDY":
                     eval = Integer.MAX_VALUE / priority_ARCHITECTURE; 
                     break;
                 case "CONTINUOUS_INTEGRATION":                
                     contActions.put(move, EVAL_CONTINUOUS_INTEGRATION(move));
+                    //eval = Integer.MAX_VALUE / priority_CONTINUOUS;             //FLAG 
                     break;
                 case "CODE_REVIEW":
                     eval = Integer.MAX_VALUE / priority_CODE_REVIEW;
                     break;
                 case "REFACTORING":
                     eval = Integer.MAX_VALUE / priority_REFACTORING;
-                    break;
-                case "RANDOM":
-                    eval = -Integer.MAX_VALUE;
                     break;                    
             }
 
-            playActions.put(move, eval);
-            evalsToPrint.put(move, Integer.toString(eval));
+            if(!move.equals("RANDOM") && !move.startsWith("TASK") && !move.startsWith("CONTINUOUS")){
+                playActions.put(move, eval);
+                evalsToPrint.put(move, Integer.toString(eval));
+            }
         }
 
         // if task_prioritization have been evaluated, we insert the best in the playAction dictionary, and we eval it according to his pirority
@@ -596,7 +684,9 @@ class Player {
 
             String bestTask = GetMaxValue(taskActions);
 
-            if(!bestTask.equals("")) playActions.put(bestTask, Integer.MAX_VALUE / pirority_TASK);            
+            if(taskActions.get(bestTask) > 0 ){
+                playActions.put(bestTask, Integer.MAX_VALUE / priority_TASK);  
+            }          
         }
 
         // IDEM for continuous encountered
@@ -605,51 +695,55 @@ class Player {
 
             String bestCont = GetMaxValue(contActions);
 
-            if(!bestCont.equals("")) playActions.put(bestCont, Integer.MAX_VALUE / priority_CONTINUOUS);            
+            if(contActions.get(bestCont) > 0) playActions.put(bestCont, Integer.MAX_VALUE / priority_CONTINUOUS);            
         }     
 
         // we analyse if the cardPlay make us loose a release occasion
 
         if(playActions.size() > 0){
 
-            String bestMove = GetMaxValue(playActions);
-            int playedCardID = GetCardID(bestMove);
+            while(playActions.size() > 0){
 
-            if(releasablesApps.size() > 0 && playedCardID > -1){ // do we have cards to release ? the playedCard is a competence card ?
-
-                Application releasableApp = applications.get(Integer.parseInt(GetMinValue(releasablesApps)));
-                int missingForBestApp = releasablesApps.get(Integer.toString(releasableApp.id));
-
-                // do i have more cards than needed for releasing app ?
-
-                boolean stopPlay = 2 * GetMyHand().cards[playedCardID] <= releasableApp.neededCards[playedCardID]; // we dont look automated cards, because they can't be played, so we can't lose them
-
-                if(playedCardID == 3 && !debtIsNull(missingForBestApp)){
-
-                    if(Integer.parseInt(evalsToPrint.get(bestMove)) >= Integer.MAX_VALUE / applications.size()){
-                        comments.add(String.format("%s allows to release more apps -> PLAY_FORCING", bestMove));
-                        stopPlay = false;
+                String bestMove = GetMaxValue(playActions);
+                int playedCardID = GetCardID(bestMove);
+    
+                if(releasablesApps.size() > 0 && playedCardID > -1){ // do we have cards to release ? the playedCard is a competence card ?
+    
+                    Application releasableApp = applications.get(Integer.parseInt(GetMinValue(releasablesApps)));
+                    int missingForBestApp = releasablesApps.get(Integer.toString(releasableApp.id));
+    
+                    // do i have more cards than needed for releasing app ?
+    
+                    boolean stopPlay = 2 * GetMyHand().cards[playedCardID] <= releasableApp.neededCards[playedCardID]; // we dont look automated cards, because they can't be played, so we can't lose them
+    
+                    if(playedCardID == 3 && !debtIsNull(missingForBestApp)){
+    
+                        if(Integer.parseInt(evalsToPrint.get(bestMove)) >= Integer.MAX_VALUE / applications.size()){
+                            comments.add(String.format("%s allows to release more apps -> PLAY_FORCING", bestMove));
+                            stopPlay = false;
+                        }
+                    
                     }
-                
-                }
-
-                if(stopPlay){
-
-                    comments.add(String.format("%s cancelled, for release app %s", bestMove, releasableApp.id));
-                    action = WAIT();
-                
+    
+                    if(stopPlay && (!bestMove.equals("CONTINUOUS_INTEGRATION 8") || myTeam.score == 4)){
+    
+                        comments.add(String.format("%s cancelled, for release app %s", bestMove, releasableApp.id));
+                        playActions.remove(bestMove);
+                    
+                    }else{
+    
+                        comments.add(String.format("playing %s (appId = %s) appNeeds[%s] = %s | myCards[%s] = %s", bestMove, releasableApp.id, playedCardID, releasableApp.neededCards[playedCardID], playedCardID, GetMyHand().cards[playedCardID]));
+                        action = bestMove;
+                        break;
+                    }
+                    
                 }else{
-
-                    comments.add(String.format("playing %s (appId = %s) appNeeds[%s] = %s | myCards[%s] = %s", bestMove, releasableApp.id, playedCardID, releasableApp.neededCards[playedCardID], playedCardID, GetMyHand().cards[playedCardID]));
-                    action = bestMove;              
-                }
-                
-            }else{
-
-                comments.add(String.format("playing %s, releasable.size = %s | playedCardID = %s", bestMove, releasablesApps.size(), playedCardID));
-                action = bestMove;
+    
+                    comments.add("Any card to play");
+                    action = bestMove;
+                    break;
+                }    
             }
-        
         }        
     }
 
@@ -660,19 +754,26 @@ class Player {
         int minMissingAfterThrow = Integer.MAX_VALUE;
         int bestCardToThrow = -1;
 
-        for(Application app : applications.values()){
+        if(GetMyHand().bonusCardCount() > 0 && GetMyHand().cards[5] > 0 && GetMyHand().nonTechnicalDebtCardCount() > 2 && collections.get("AUTOMATED").cards[8] < 4){
+        
+            bestCardToThrow = GetCardToThrowForBonus(GetMyHand());
+        
+        }else{
 
-            CardCollection myHandAfterThrow = myHand.clone();
+            for(Application app : applications.values()){
 
-            int cardToThrow = GetCardToThrowForRelease(myHand, app);
-
-            myHandAfterThrow.RemoveCard(cardToThrow);
-
-            int missingCardAfterThrow = app.GetMissingCardsForRelease(myHandAfterThrow);
-
-            if(missingCardAfterThrow < minMissingAfterThrow){
-                minMissingAfterThrow = missingCardAfterThrow;
-                bestCardToThrow = cardToThrow;
+                CardCollection myHandAfterThrow = myHand.clone();
+    
+                int cardToThrow = GetCardToThrowForRelease(myHand, app);
+    
+                myHandAfterThrow.RemoveCard(cardToThrow);
+    
+                int missingAfterThrow = app.GetMissingCardsForRelease(myHandAfterThrow);
+    
+                if(missingAfterThrow < minMissingAfterThrow){
+                    minMissingAfterThrow = missingAfterThrow;
+                    bestCardToThrow = cardToThrow;
+                }
             }
         }
 
@@ -740,45 +841,54 @@ class Player {
         int bestZone = startZone;
         if(myTeam.permanentDailyRoutineCards <= 0) return startZone;
 
-        switch(startZone){
+        switch(startZone){            
 
             case TRAINING:
-                bestZone = Prioritize(TRAINING, CODING, REFACTORING);
+                bestZone = PrioritizeForRelease(TRAINING, CODING, REFACTORING);                
                 break;
 
             case CODING:
-                bestZone = Prioritize(TRAINING, CODING, DAILY_ROUTINE);                                
+                bestZone = PrioritizeForRelease(TRAINING, CODING, DAILY_ROUTINE);                                
                 break;
 
             case DAILY_ROUTINE:
-                bestZone = Prioritize(CODING, TASK_PRIORITIZATION, DAILY_ROUTINE);
+                
+                if(GetMyHand().nonTechnicalDebtCardCount() > 0 && remainingCards[3] > 0 && (releasablesApps.size() <= 0 || GetMyHand().cards[5] <= 0)){
+                    bestZone = TASK_PRIORITIZATION;
+                }else{
+                    bestZone = PrioritizeForRelease(CODING, DAILY_ROUTINE, TASK_PRIORITIZATION);
+                }                  
                 break;
 
             case TASK_PRIORITIZATION:
 
-                if(remainingCards[3] > 0 && (releasablesApps.size() <= 0 || GetMyHand().cards[5] <= 0)){
+                if(GetMyHand().nonTechnicalDebtCardCount() > 0 && remainingCards[3] > 0 && (releasablesApps.size() <= 0 || GetMyHand().cards[5] <= 0)){
                     bestZone = TASK_PRIORITIZATION;
                 }else if(remainingCards[4] > 0 && myTeam.permanentArchitectureStudyCards <= 0){
                     bestZone = ARCHITECTURE_STUDY;                 
                 }else{
-                    bestZone = Prioritize(DAILY_ROUTINE, TASK_PRIORITIZATION, ARCHITECTURE_STUDY);
+                    bestZone = PrioritizeForRelease(DAILY_ROUTINE, ARCHITECTURE_STUDY, TASK_PRIORITIZATION);
                 }                
                 break;
 
             case ARCHITECTURE_STUDY:                
-                bestZone = Prioritize(CONTINUOUS_INTEGRATION, TASK_PRIORITIZATION, ARCHITECTURE_STUDY);
+                if(GetMyHand().nonTechnicalDebtCardCount() > 0){
+                    bestZone = PrioritizeForRelease(CONTINUOUS_INTEGRATION, TASK_PRIORITIZATION, ARCHITECTURE_STUDY);
+                }else{
+                    bestZone = PrioritizeForRelease(ARCHITECTURE_STUDY, TASK_PRIORITIZATION, ARCHITECTURE_STUDY);
+                }
                 break;
 
             case CONTINUOUS_INTEGRATION:
-                bestZone = Prioritize(CONTINUOUS_INTEGRATION, CODE_REVIEW, ARCHITECTURE_STUDY);
+                bestZone = PrioritizeForRelease(CONTINUOUS_INTEGRATION, CODE_REVIEW, ARCHITECTURE_STUDY);
                 break;
 
             case CODE_REVIEW:
-                bestZone = Prioritize(CONTINUOUS_INTEGRATION, CODE_REVIEW, REFACTORING);
+                bestZone = PrioritizeForRelease(CONTINUOUS_INTEGRATION, CODE_REVIEW, REFACTORING);
                 break;
 
             case REFACTORING:
-                bestZone = Prioritize(TRAINING, CONTINUOUS_INTEGRATION, REFACTORING);
+                bestZone = PrioritizeForRelease(TRAINING, CONTINUOUS_INTEGRATION, REFACTORING);
                 break;
 
             default:
@@ -813,69 +923,65 @@ class Player {
         myNewHand.RemoveCard(cardToThrow);
         myNewHand.AddCard(cardToTake);
 
-        int releasableAppWithMyNewHand = myNewHand.releasableAppsCount(myTeam.score < 4);
-        int releasableAppWithMyActualHand = myActualHand.releasableAppsCount(myTeam.score < 4);
+        int releasableAppWithMyNewHand = AddAutomatedCards(myNewHand).releasableAppsCount(myTeam.score < 4);
+        int releasableAppWithMyActualHand = AddAutomatedCards(myActualHand).releasableAppsCount(myTeam.score < 4);
 
         if(releasableAppWithMyNewHand > releasableAppWithMyActualHand){
             
             eval = (Integer.MAX_VALUE / applications.size()) * releasableAppWithMyNewHand; // alows to prioritize wich one have the most releasableApps
         
-        }else if(releasableAppWithMyActualHand == releasableAppWithMyNewHand){
+        }/* else if(releasableAppWithMyActualHand == releasableAppWithMyNewHand){
 
-            int priority_TRAINING = 1;
-            int priority_CODING = 1;
-            int piority_BONUS = 2;
-            int priority_DAILY = 3;
-            int priority_ARCHITECTURE = 4;
-            int priority_CODE_REVIEW = 5;
-            int piority_CONTINUOUS = 6;
-            int priority_REFACTORING = 6;
-            int pirority_TASK = 7;            
+                        
+                int piority_CONTINUOUS = 1;
+                int pirority_TASK = 2;     
+                int priority_TRAINING = 3;
+                int priority_CODING = 3;
+                int priority_DAILY = 4;
+                int priority_ARCHITECTURE = 4;
+                int priority_CODE_REVIEW = 6;            
+                int priority_REFACTORING = 7;                   
 
-            switch(cardToTake){
-                
-                case TRAINING:
-                    eval = 9999  / priority_TRAINING;
-                    break;
-
-                case CODING:
-                    eval = 9999  / priority_CODING;
-                    break;
-
-                case DAILY_ROUTINE:
-                    eval = 9999  / priority_DAILY;
-                    break;
-
-                case TASK_PRIORITIZATION:
-                    eval = 9999  / pirority_TASK;
-                    break;   
+                switch(cardToTake){
                     
-                case ARCHITECTURE_STUDY:
-                    eval = 9999  / priority_ARCHITECTURE;
-                    break;                     
+                    case TRAINING:
+                        eval = 9999  / priority_TRAINING;
+                        break;
 
-                case CONTINUOUS_INTEGRATION:
-                    eval = 9999  / piority_CONTINUOUS;
-                    break;
+                    case CODING:
+                        eval = 9999  / priority_CODING;
+                        break;
 
-                case CODE_REVIEW:
-                    eval = 9999  / priority_CODE_REVIEW;
-                    break;      
-                    
-                case REFACTORING:
-                    eval = 9999  / priority_REFACTORING;
-                    break;                       
+                    case DAILY_ROUTINE:
+                        eval = 9999  / priority_DAILY;
+                        break;
 
-                case BONUS_CARD:
-                    eval = 9999 / piority_BONUS;
-                    break;
-                    
-                default: break;
-            }
+                    case TASK_PRIORITIZATION:
+                        eval = 9999  / pirority_TASK;
+                        break;   
+                        
+                    case ARCHITECTURE_STUDY:
+                        eval = 9999  / priority_ARCHITECTURE;
+                        break;                     
 
-        }else{
+                    case CONTINUOUS_INTEGRATION:
+                        eval = 9999  / piority_CONTINUOUS;
+                        break;
 
-            comments.add(String.format("%s stopped because it decrease the releasableAppCount (before = %s, after = %s)", move, releasableAppWithMyActualHand, releasableAppWithMyNewHand));
+                    case CODE_REVIEW:
+                        eval = 9999  / priority_CODE_REVIEW;
+                        break;      
+                        
+                    case REFACTORING:
+                        eval = 9999  / priority_REFACTORING;
+                        break;                       
+
+                    default: break;
+                }
+
+        } */else{
+
+            comments.add(String.format("%s stopped because it doesn't increase the releasableAppCount (before = %s, after = %s)", move, releasableAppWithMyActualHand, releasableAppWithMyNewHand));
             eval = -9999;
         }
 
@@ -889,7 +995,11 @@ class Player {
         int eval = -9999;
         int cardID = Integer.parseInt(move.split(" ")[1]);
 
-        eval = 9999 * totalNeeds[cardID];
+        if(cardID == BONUS_CARD){
+            eval = Integer.MAX_VALUE;
+        }else{
+            eval = 9999 * totalNeeds[cardID];
+        }        
 
         evalsToPrint.put(move, PadEval(eval));                
         return eval;
@@ -914,17 +1024,10 @@ class Player {
                 break;
             case "RELEASE":
                 action = WAIT();
-/* 
-                if(releasablesApps.size() > 0){
-                    
-                    for(String appID : releasablesApps.keySet()){
 
-                        int missingCards = releasablesApps.get(appID);
-                        
-                        if(debtIsNull(missingCards)) action = RELEASE(Integer.parseInt(appID));
-                        break;
-                    }
-                } */
+                if(releasablesApps.size() > 0 && myTeam.permanentDailyRoutineCards <= 0 && myTeam.permanentArchitectureStudyCards <= 0){                    
+                    PHASE_RELEASE();
+                }
                 break;
                 
             default:
@@ -937,7 +1040,7 @@ class Player {
 
         int autoBonus = collections.containsKey("AUTOMATED") ? collections.get("AUTOMATED").cards[BONUS_CARD] : 0;
 
-        boolean canILoot = GetMyHand().cards[5] > 0 && GetMyHand().cards[8] > 0;
+        //boolean canILoot = GetMyHand().cards[5] > 0 && GetMyHand().cards[8] > 0;
 
         if(gameTurn == 0){
         
@@ -946,99 +1049,18 @@ class Player {
         }else{
 
             if(myTeam.permanentDailyRoutineCards == 0){ // on va essayer de récup un DAILY le plus vite possible, et de récup un max de BONUS / de CONTINUOUS
+
+                if(EVAL_ZONE(DAILY_ROUTINE, false) && myTeam.location < 2 || myTeam.location == 7){
+                    action = MOVE(DAILY_ROUTINE);
+                }else if(EVAL_ZONE(CONTINUOUS_INTEGRATION, false) && myTeam.location < 5 && allMyCards.cards[CONTINUOUS_INTEGRATION] <= 0){
+                    action = MOVE(CONTINUOUS_INTEGRATION);
+                }else if(EVAL_ZONE(CODE_REVIEW, false) && myTeam.location < 6 && allMyCards.cards[BONUS_CARD] - autoBonus <= 0){
+                    action = MOVE(CODE_REVIEW);
+                }else{
+                    action = GetNextMoveForBonus();
+                }
                 
-                switch(myTeam.location){ 
-
-                    case TRAINING:
-
-                        if(EVAL_ZONE(CODING, true) && allMyCards.cards[2] > 0){
-                            action = MOVE(CODING);
-                        }else if(remainingCards[2] > 0 && allMyCards.cards[2] <= 0){
-                            action = MOVE(DAILY_ROUTINE);
-                        }else{
-                            action = GetNextMoveForBonus();
-                        }
-                        break;
-
-                    case CODING:
-
-                        if(EVAL_ZONE(ARCHITECTURE_STUDY, true) && allMyCards.cards[2] > 0){
-                            action = MOVE(ARCHITECTURE_STUDY);
-                        }else if(remainingCards[2] > 0 && allMyCards.cards[2] <= 0){
-                            action = MOVE(DAILY_ROUTINE);
-                        }else{
-                            action = GetNextMoveForBonus();
-                        }                    
-                        break;
-        
-                    case DAILY_ROUTINE:
-
-                        if(EVAL_ZONE(ARCHITECTURE_STUDY, true) && allMyCards.cards[2] > 0){
-                            action = MOVE(ARCHITECTURE_STUDY);
-                        }else if(remainingCards[2] > 0 && allMyCards.cards[2] <= 0){
-                            action = MOVE(DAILY_ROUTINE);
-                        }else{
-                            action = GetNextMoveForBonus();
-                        }  
-                        break;
-
-                    case TASK_PRIORITIZATION:
-
-                        if(EVAL_ZONE(ARCHITECTURE_STUDY, true) && allMyCards.cards[2] > 0){
-                            action = MOVE(ARCHITECTURE_STUDY);
-                        }else if(remainingCards[2] > 0 && allMyCards.cards[2] <= 0){
-                            action = MOVE(DAILY_ROUTINE);
-                        }else{
-                            action = GetNextMoveForBonus();
-                        }  
-                        break;
-
-                    case ARCHITECTURE_STUDY:
-
-                        if(EVAL_ZONE(CONTINUOUS_INTEGRATION, true) && allMyCards.cards[2] > 0){ // on ignore s'il reste des cartes, car au pire ça bloquera l'adversaire
-                            action = MOVE(CONTINUOUS_INTEGRATION);
-                        }else if(remainingCards[2] > 0 && allMyCards.cards[2] <= 0){
-                            action = MOVE(DAILY_ROUTINE);
-                        }else{
-                            action = GetNextMoveForBonus();
-                        }                     
-                        break;
-        
-                    case CONTINUOUS_INTEGRATION:
-
-                        if(EVAL_ZONE(CODE_REVIEW, true) && allMyCards.cards[2] > 0){ // on ignore s'il reste des cartes, car au pire ça bloquera l'adversaire
-                            action = MOVE(CODE_REVIEW);
-                        }else if(remainingCards[2] > 0 && allMyCards.cards[2] <= 0){
-                            action = MOVE(DAILY_ROUTINE);
-                        }else{ // on ne regarde pas les cartes importantes, car ici on a de grandes chances d'avoir déjà joué
-                            action = GetNextMoveForBonus();
-                        }                     
-                        break;
-        
-                    case CODE_REVIEW:
-
-                        if(canILoot && EVAL_ZONE(REFACTORING, true) && allMyCards.cards[2] > 0){
-                            action = MOVE(REFACTORING);
-                        }else if(EVAL_ZONE(TRAINING, true) && allMyCards.cards[2] > 0){ // on ignore s'il reste des cartes, car au pire ça bloquera l'adversaire
-                            action = MOVE(TRAINING);
-                        }else if(remainingCards[2] > 0 && allMyCards.cards[2] <= 0){
-                            action = MOVE(DAILY_ROUTINE);
-                        }else{ // on ne regarde pas les cartes importantes, car ici on a de grandes chances d'avoir déjà joué
-                            action = GetNextMoveForBonus();
-                        }                       
-                    case REFACTORING:
-                        if(remainingCards[2] > 0 && allMyCards.cards[2] <= 0){
-                            action = MOVE(DAILY_ROUTINE);
-                        }else{
-                            action = GetNextMoveForBonus();
-                        }
-                        break;
-        
-                    default:
-                        action = RANDOM();
-                }  
-                
-            }else if(remainingCards[5] > 0 && allMyCards.cards[CONTINUOUS_INTEGRATION] <= 0 && gameTurn > 10){
+            }else if(remainingCards[5] > 0 && allMyCards.cards[CONTINUOUS_INTEGRATION] <= 0 && oppTeam.location != 5){
 
                 if(myTeam.location < 4){
 
@@ -1072,7 +1094,7 @@ class Player {
                     }                    
                 }                
 
-            }else if(remainingCards[6] > 0 && allMyCards.cards[CODE_REVIEW] <= 0 && allMyCards.bonusCardCount() - autoBonus <= 0){ // if we dont have any bonus in hand or in draw, we try to get a code review as fast as possible
+            }else if(remainingCards[6] > 0 && allMyCards.cards[CODE_REVIEW] <= 0 && allMyCards.bonusCardCount() - autoBonus <= 0 && oppTeam.location != 6){ // if we dont have any bonus in hand or in draw, we try to get a code review as fast as possible
                 
                 if(myTeam.location < 5){
 
@@ -1121,8 +1143,8 @@ class Player {
 
                     case CODING:
 
-                        if(remainingCards[2] > 0 && EVAL_ZONE(DAILY_ROUTINE, true)){ // on bouge direct sur daily routine, car ça permet de se positionner en optimalStart
-                            action = MOVE(DAILY_ROUTINE);
+                        if(remainingCards[3] > 0 && EVAL_ZONE(DAILY_ROUTINE, true)){ // on bouge direct sur daily routine, car ça permet de se positionner en optimalStart
+                            action = MOVE(DAILY_ROUTINE, TASK_PRIORITIZATION);
                         }else{
                             action = GetNextMoveForBonus();
                         }                     
@@ -1130,8 +1152,10 @@ class Player {
         
                     case DAILY_ROUTINE:
 
-                        if(remainingCards[4] > 0 && EVAL_ZONE(TASK_PRIORITIZATION, false)){ // le canIgive sert à voir si on peut échanger une carte qui ne nous intéresse pas
+                        if(remainingCards[4] > 0 && EVAL_ZONE(TASK_PRIORITIZATION, false) && myTeam.permanentArchitectureStudyCards < MAX_ARCHITECTURE_PLAYABLE){ // le canIgive sert à voir si on peut échanger une carte qui ne nous intéresse pas
                             action = MOVE(TASK_PRIORITIZATION, ARCHITECTURE_STUDY);
+                        }else if(remainingCards[3] > 0 && EVAL_ZONE(TASK_PRIORITIZATION, true)){ // on bouge direct sur daily routine, car ça permet de se positionner en optimalStart
+                            action = MOVE(TASK_PRIORITIZATION);
                         }else{
                             action = GetNextMoveForBonus();
                         }
@@ -1139,12 +1163,22 @@ class Player {
         
                     case TASK_PRIORITIZATION:
 
-                        if(remainingCards[5] > 0 && EVAL_ZONE(ARCHITECTURE_STUDY, true)){ 
-                            action = MOVE(ARCHITECTURE_STUDY, CONTINUOUS_INTEGRATION);
-                        }else if (EVAL_ZONE(CONTINUOUS_INTEGRATION, true)){
-                            action = MOVE(CONTINUOUS_INTEGRATION);
-                        }else if(remainingCards[5] > 0 && EVAL_ZONE(CODE_REVIEW, true)){
-                            action = MOVE(CODE_REVIEW, CONTINUOUS_INTEGRATION);
+                        if(remainingCards[5] > 0){
+
+                            if (EVAL_ZONE(CONTINUOUS_INTEGRATION, true)){
+                                action = MOVE(CONTINUOUS_INTEGRATION);
+                            }else if(EVAL_ZONE(ARCHITECTURE_STUDY, true)){ 
+                                action = MOVE(ARCHITECTURE_STUDY, CONTINUOUS_INTEGRATION);
+                            }else if(EVAL_ZONE(CODE_REVIEW, true)){
+                                action = MOVE(CODE_REVIEW, CONTINUOUS_INTEGRATION);
+                            }else{
+                                action = GetNextMoveForBonus();
+                            }
+
+                        }else if(remainingCards[4] > 0 && myTeam.permanentArchitectureStudyCards < MAX_ARCHITECTURE_PLAYABLE){
+                            action = MOVE(ARCHITECTURE_STUDY);
+                        }else if(remainingCards[3] > 0 && EVAL_ZONE(ARCHITECTURE_STUDY, true)){
+                            action = MOVE(ARCHITECTURE_STUDY, TASK_PRIORITIZATION);
                         }else{
                             action = GetNextMoveForBonus();
                         }                                  
@@ -1196,6 +1230,7 @@ class Player {
 
                 
             }
+        
         }
     }
 
@@ -1314,7 +1349,7 @@ class Player {
     public static String GetNextMoveForBonus(){
 
         boolean zoneFound = false;
-        boolean canIgive = GetMyHand().nonBonusLootableCardCount() >= 1;
+        boolean canIgive = false; //GetMyHand().nonBonusLootableCardCount() >= 1;
 
         int startZone = myTeam.location;
         int bonusZone = startZone;
@@ -1326,8 +1361,6 @@ class Player {
             zoneFound = startZone != myTeam.location && (canIgive || EVAL_ZONE(startZone, true)); // dans la phase de loot, on s'en fou d'avoir un bonus, au contraire
         }
 
-        //System.err.printf("final move = %s\n", startZone);
-        
         action = MOVE(startZone, bonusZone);  
         
         return action;
@@ -1337,6 +1370,20 @@ class Player {
         
         return DAILY_START();
         //return CONTIUNOUS_START();
+
+/*         int bestZone = 0;
+
+        if(EVAL_ZONE(DAILY_ROUTINE, true) == true){
+            bestZone = DAILY_ROUTINE;
+            optimalStart = true;
+        }else if(EVAL_ZONE(ARCHITECTURE_STUDY, true) == true){
+            bestZone = ARCHITECTURE_STUDY;
+        }else{
+            bestZone = CONTINUOUS_INTEGRATION;
+            optimalStart = false;
+        }
+
+        return MOVE(bestZone);  */
 
     }
 
@@ -1379,15 +1426,15 @@ class Player {
         switch(startZone){
 
             case TRAINING:
-                bestZone = Prioritize(TRAINING, CODING, REFACTORING);
+                bestZone = PrioritizeForBonus(TRAINING, CODING, REFACTORING);
                 break;
 
             case CODING:
-                bestZone = Prioritize(TRAINING, CODING, DAILY_ROUTINE);                                
+                bestZone = PrioritizeForBonus(TRAINING, CODING, DAILY_ROUTINE);                                
                 break;
 
             case DAILY_ROUTINE:
-                bestZone = Prioritize(CODING, TASK_PRIORITIZATION, DAILY_ROUTINE);                
+                bestZone = PrioritizeForBonus(CODING, TASK_PRIORITIZATION, DAILY_ROUTINE);                
                 break;
 
             case TASK_PRIORITIZATION:
@@ -1395,36 +1442,36 @@ class Player {
                 if(remainingCards[4] > 0 && myTeam.permanentArchitectureStudyCards <= 0){
                     bestZone = ARCHITECTURE_STUDY;                 
                 }else{
-                    bestZone = Prioritize(TASK_PRIORITIZATION, ARCHITECTURE_STUDY, DAILY_ROUTINE);
+                    bestZone = PrioritizeForBonus(TASK_PRIORITIZATION, ARCHITECTURE_STUDY, DAILY_ROUTINE);
                 }               
                 break;
 
             case ARCHITECTURE_STUDY:
                 
                 if(myTeam.permanentArchitectureStudyCards <= 0){
-                    bestZone = Prioritize(CONTINUOUS_INTEGRATION, ARCHITECTURE_STUDY, TASK_PRIORITIZATION);
+                    bestZone = PrioritizeForBonus(CONTINUOUS_INTEGRATION, ARCHITECTURE_STUDY, TASK_PRIORITIZATION);
                 }else{
-                    bestZone = Prioritize(CONTINUOUS_INTEGRATION, TASK_PRIORITIZATION, ARCHITECTURE_STUDY);
+                    bestZone = PrioritizeForBonus(CONTINUOUS_INTEGRATION, TASK_PRIORITIZATION, ARCHITECTURE_STUDY);
                 }
                 break;
 
             case CONTINUOUS_INTEGRATION:
 
                 if(myTeam.permanentArchitectureStudyCards <= 0){
-                    bestZone = Prioritize(CONTINUOUS_INTEGRATION, ARCHITECTURE_STUDY, CODE_REVIEW);
+                    bestZone = PrioritizeForBonus(CONTINUOUS_INTEGRATION, ARCHITECTURE_STUDY, CODE_REVIEW);
                 }else{
-                    bestZone = Prioritize(CONTINUOUS_INTEGRATION, CODE_REVIEW, ARCHITECTURE_STUDY);
+                    bestZone = PrioritizeForBonus(CONTINUOUS_INTEGRATION, CODE_REVIEW, ARCHITECTURE_STUDY);
                 }
                 break;
 
             case CODE_REVIEW:
                 
-                bestZone = Prioritize(CONTINUOUS_INTEGRATION, CODE_REVIEW, REFACTORING);
+                bestZone = PrioritizeForBonus(CONTINUOUS_INTEGRATION, CODE_REVIEW, REFACTORING);
                 break;
 
             case REFACTORING:
 
-                bestZone = Prioritize(TRAINING, CODE_REVIEW, REFACTORING);
+                bestZone = PrioritizeForBonus(TRAINING, CODE_REVIEW, REFACTORING);
                 break;
 
             default:
@@ -1460,7 +1507,7 @@ class Player {
 
         int[] oppCards = GetOpponnentCards().cards;
 
-        for(int i = 0; i < 9; i++){
+        for(int i = 0; i < 8; i++){
 
             if(myHand_WITHOUT_AUTO.cards[i] > 0 && (totalNeeds[i] < minNeed || (totalNeeds[i] == minNeed && oppCards[i] >= 2))){
                 minNeed = totalNeeds[i];
@@ -1473,10 +1520,10 @@ class Player {
 
     // MOVE FUNCTIONS
 
-    public static int GetZoneAbleToRelease(int startZone, boolean withDebt) throws Exception{
+    public static int GetZoneAbleToRelease_OLD(int startZone, boolean withDebt) throws Exception{
 
         int bestZone = -1;
-        int minScore = withDebt ? MAX_TO_RELEASE : 0;
+        int minScore = withDebt ? MAX_TO_RELEASE : 1;
         int appID = -1;
 
         for(int i = 1; i < 8; i++){
@@ -1487,7 +1534,7 @@ class Player {
 
                 CardCollection myHand = new CardCollection(collections.get("HAND")); // on ne prends pas les cartes automatisée car cela fausserait les résultats des procédures appelées plus bas
 
-                comments.add(String.format("%s : by moving to zone %s", AddAutomatedCards(myHand).toString(), zoneID));
+                //comments.add(String.format("%s : zone %s", AddAutomatedCards(myHand).toString(), zoneID));
 
                 for(Application app : applications.values()){
 
@@ -1500,6 +1547,8 @@ class Player {
                     }                    
 
                     int missingToRelease = app.GetMissingCardsForRelease(AddAutomatedCards(myHandAfterMove));
+
+                    if(zoneID == 7) comments.add(String.format("%s : zone %s / missing for app %s = %s", AddAutomatedCards(myHandAfterMove).toString(), zoneID, app.id, missingToRelease));
 
                     if(missingToRelease < minScore || (missingToRelease == minScore && zoneID < bestZone)){
                         minScore = missingToRelease;
@@ -1515,26 +1564,66 @@ class Player {
         return bestZone;
     }
 
+    public static Map<String, Integer> GetZoneAbleToRelease(int startZone, boolean withDebt) throws Exception{
+
+        Map<String, Integer> zonesAbleToRelease = new HashMap<String, Integer>();
+
+        int minScore = withDebt ? MAX_TO_RELEASE : 0;
+ 
+        for(int i = 1; i < 8; i++){
+
+            int zoneID = (startZone + i) % 8;
+
+            if(zoneID != myTeam.location){ // && (GetDistance(zoneID, oppTeam.location) > 1 || myTeam.score == 4)){
+
+                CardCollection myHand = new CardCollection(collections.get("HAND")); // on ne prends pas les cartes automatisée car cela fausserait les résultats des procédures appelées plus bas
+
+                //comments.add(String.format("%s : zone %s", AddAutomatedCards(myHand).toString(), zoneID));
+
+                for(Application app : applications.values()){
+
+                    CardCollection myHandAfterMove = GetMyHandAfterMove_RELEASE(myHand, zoneID, app);  
+
+                    if(remainingCards[zoneID] > 0){
+                        myHandAfterMove.AddCard(zoneID);
+                    }else{
+                        myHandAfterMove.AddCard(BONUS_CARD);
+                    }                    
+
+                    int missingToRelease = app.GetMissingCardsForRelease(AddAutomatedCards(myHandAfterMove));
+                    
+                    if(missingToRelease <= minScore){
+                        zonesAbleToRelease.put(String.format("%s:%s", zoneID, app.id), missingToRelease);
+                        comments.add(String.format("Zone %s able to release app %s with %s debt", zoneID, app.id, missingToRelease));
+                    }
+                }
+            }
+        }
+
+        if(zonesAbleToRelease.size() > 0) comments.add(String.format("%s zones able to release", zonesAbleToRelease.size()));
+
+        return zonesAbleToRelease;
+    }
+
     public static CardCollection GetMyHandAfterMove_RELEASE(CardCollection myHand, int zoneToMove, Application appToRelease) throws Exception{
 
-        CardCollection myHandTemp = myHand.clone();
-        CardCollection myHandAfterThrow = myHand.clone();; //boolean canIMove = false;
+        CardCollection myHandAfterThrow = myHand.clone(); //boolean canIMove = false;
 
         if(GetDistance(zoneToMove, oppTeam.location) > 1){
 
-            if(zoneToMove < myTeam.location){ // we can go to zoneToMove without throwing any card
+            if(zoneToMove < myTeam.location){ // we only need to throw 2 cards, else we dont need to throw any card and we return the same hand given in parameters
                 
-                myHandAfterThrow = GetMyHandAfterThrow_RELEASE(myHandTemp, appToRelease); 
+                myHandAfterThrow = GetMyHandAfterThrow_RELEASE(myHandAfterThrow, appToRelease); 
             
             }
 
         }else if(zoneToMove > myTeam.location){ // we only need to give one card to the opponent
             
-            myHandAfterThrow = GetMyHandAfterGive_RELEASE(myHandTemp, appToRelease); // we have to give one card to release
+            myHandAfterThrow = GetMyHandAfterGive_RELEASE(myHandAfterThrow, appToRelease); // we have to give one card to release
         
         }else{ // we need to throw two cards to the admin desk, and to give one card to the opponent
 
-            myHandAfterThrow = GetMyHandAfterThrow_RELEASE(myHandTemp, appToRelease);
+            myHandAfterThrow = GetMyHandAfterThrow_RELEASE(myHandAfterThrow, appToRelease);
             myHandAfterThrow = GetMyHandAfterGive_RELEASE(myHandAfterThrow, appToRelease);        
         }
 
@@ -1668,7 +1757,7 @@ class Player {
         
     // GENERIC FUNCTIONS
 
-    public static int Prioritize(int zone1, int zone2, int zone3){
+    public static int PrioritizeForBonus(int zone1, int zone2, int zone3){
         
         int bestZone = -1;
         
@@ -1682,6 +1771,25 @@ class Player {
 
         return bestZone;
     }
+
+    public static int PrioritizeForRelease(int zone1, int zone2, int zone3){
+        
+        int bestZone = -1;
+
+        int zone1Count = totalNeeds[zone1];
+        int zone2Count = totalNeeds[zone2];
+        int zone3Count = totalNeeds[zone3];
+        
+        if(remainingCards[zone1] > 0 && zone1Count >= zone2Count && zone1Count >= zone3Count){            
+            bestZone = zone1;        
+        }else if(remainingCards[zone2] > 0 && zone2Count >= zone1Count && zone2Count >= zone3Count){
+            bestZone = zone2;        
+        }else{            
+            bestZone = zone3;
+        }
+
+        return bestZone;
+    }    
 
     public static int GetDistance(int zoneA, int zoneB){
 
@@ -1741,6 +1849,13 @@ class Player {
         return -1;
     }
     
+    public static void COUNT_CYCLES(String action){
+        
+        int zoneToMove = Integer.parseInt(action.split(" ")[1]);
+
+        if(zoneToMove < myTeam.location) cycles++;
+    } 
+
     // COLLECTION FUNCTIONS
 
     public static CardCollection GetUsefullHand(){
@@ -1813,8 +1928,9 @@ class Player {
 
     public static void PrintComments(){
 
-        comments.add(String.format("PHASE = %s, MAX_TO_RELEASE = %s\n\n", gamePhase, MAX_TO_RELEASE));
-        comments.add(String.format("releasable apps : %s", releasablesApps.toString()));
+        
+        //comments.add(0, String.format("releasable apps : %s", releasablesApps.toString()));
+        comments.add(0, String.format("PHASE = %s, MAX_TO_RELEASE = %s\n", gamePhase, MAX_TO_RELEASE));
 
         for(String commentary : comments){
             System.err.println(commentary);
