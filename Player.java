@@ -1,520 +1,289 @@
 import java.util.*;
 
-class Player {
+class Player{
 
-    private static enum UnitType{
-        CULTIST,
-        CULTLEADER
+    public static int myPosition;
+
+    public static String[] runes;    
+    public static String[] letters;
+
+    public static String magicPhrase;
+    public static String instructions;
+
+    public static void main(String args[]){
+
+        INITIALIZE();
+
+        for (int i = 0; i < magicPhrase.length(); i++) {
+            
+            String currentLetter = magicPhrase.substring(i, i + 1);
+            //String remainingString = magicPhrase.substring(i); //TODO: use this to find patterns
+
+            Action bestAction = findBestRune(myPosition, currentLetter);
+            
+            instructions += bestAction.instruction;
+            runes[bestAction.modifiedRuneID] = bestAction.modifiedLetter;
+            myPosition = bestAction.modifiedRuneID;
+        }
+
+        System.out.println(instructions);
     }
 
-    private static enum TileType {
-        FLOOR, 
-        OBSTACLE,
-        BORDER
-    }
+    public static class Action {
 
-    private static final int[][] directions = {
-        { 0,  1},
-        { 0, -1},
-        { 1,  0},
-        {-1,  0},
-    };
+        public String instruction;
+        public String modifiedLetter;
+        public int modifiedRuneID;
 
-    private static Scanner in;
-    private static Tile[][] tiles;
+        public Action(String instruction_, String letter_, int runeID_){
+            this.instruction = instruction_;
+            this.modifiedLetter = letter_;
+            this.modifiedRuneID = runeID_;
+        }
 
-    private static int myId;    // 0 - you are the first player, 1 - you are the second player
-    private static int mapWidth;   // Width of the board
-    private static int mapHeight;  // Height of the board
-
-    private static Map<Integer, Unit> allUnits;
-    private static List<Unit> myUnits;
-    private static List<Unit> ennemyUnits;
-    private static List<Unit> neutralUnits;
-
-    private static Unit myLeader;
-    private static Unit ennemyLeader;    
-
-    public static void main(String args[]) {
-
-        in = new Scanner(System.in);
-
-        INIT(in);
-
-        // game loop
-        while (true) {
-
-            UPDATE(in);
-
-            if(tryConvert() == true) continue;
-
-            System.out.println("WAIT");
+        public int length(){
+            return this.instruction.length();
         }
     }
 
-    private static boolean tryConvert(){
+    public static Action findBestRune(int actualPosition, String letterToSet){
 
-        List<Unit> unitsToConvert = myLeader.getUnitsToConvert();
+        Action bestAction = null;
+        int bestLenght = Integer.MAX_VALUE;
 
-        if(unitsToConvert.size() > 0){
-            myLeader.CONVERT(unitsToConvert.get(0));
-            return true;
-        }
+        for (int i = 0; i < runes.length; i++) {
+            String move = getInstructionsFor(myPosition, i, letterToSet);
 
-        return false;
-    }
+            Action action = new Action(move, letterToSet, i);
 
-    private static void moveLeader(){
-
-    }
-
-    // CLASSES
-
-    public static class Tile {
-
-        protected final int m_col;
-        protected final int m_row;
-        private TileType type;
-        private Unit unit;
-    
-        public Tile(int col, int row, TileType type) {
-            this.m_col = col;
-            this.m_row = row;
-            this.type = type;
-            this.unit = null;
-        }
-    
-        public Unit getUnit() {
-            return unit;
-        }
-    
-        public void setUnit(Unit unit) {
-            this.unit = unit;
-        }
-
-        public void removeUnit(){
-            this.unit = null;
-        }
-    
-        public int getRow() {
-            return m_row;
-        }
-    
-        public int getCol() {
-            return m_col;
-        }
-    
-        public TileType getType() {
-            return type;
-        }
-
-        public String toString() {
-            return String.format("Tile[%02d, %02d]", m_row, m_col);
-        }
-    }
-
-    private static class Unit{
-
-        private UnitType m_type;
-        private int m_id;
-        private int m_hp;
-        private int m_row;
-        private int m_col;
-        private int m_ownerID;
-
-        private boolean isInGame;
-        private Tile m_tile;
-
-        public Unit(int id, int hp, int row, int col, int owner, int type){
-
-            this.m_id = id;
-            this.m_hp = hp;
-            this.m_row = row;
-            this.m_col = col;
-            this.m_ownerID = owner;
-            this.m_type = UnitType.values()[type];
-
-            this.m_tile = tiles[row][col];
-            this.isInGame = true;
-        }
-
-        public int getRow(){return m_row;}
-        public int getCol(){return m_col;}
-        public int getHp(){return m_hp;}
-
-        public UnitType getType(){return m_type;}
-        
-        public boolean isFriend(){return m_ownerID == myId;}
-        public boolean isEnnemy(){return m_ownerID != myId && m_ownerID != 2;}
-        public boolean isNeutral(){return m_ownerID == 2;}        
-
-        public void move(int row, int col){
-
-            this.m_row = row;
-            this.m_col = col;
-
-            this.m_tile.removeUnit();
-            this.m_tile = tiles[row][col];
-            this.m_tile.setUnit(this);            
-        }
-
-        private Unit getCloserUnit(List<Unit> units){
-
-            int minDist = Integer.MAX_VALUE;
-
-            for(Unit unit : units){
-
-            }        
-
-            return null;
-        }        
-
-        public List<Unit> getUnitsToConvert(){
-
-            List<Unit> unitsToConvert = new ArrayList<Unit>();
-
-            for(int[] dir : directions){
-
-                Tile nextTile = tiles[m_row + dir[0]][m_col + dir[1]];
-
-                if(nextTile.unit != null){
-                    if(nextTile.unit.isNeutral()){
-                        unitsToConvert.add(nextTile.unit);
-                    }
-                }
+            if(action.length() < bestLenght){
+                bestLenght = action.length();
+                bestAction = action;
             }
-
-            return unitsToConvert;
         }
 
-        public void takeDamage(int damage) {
-            m_hp = Math.max(0, m_hp - damage);
-            isInGame = m_hp > 0;
-        }        
-
-        public void WAIT(){
-            System.out.println("WAIT");
-        }
-
-        public void MOVE(int row, int col){
-            System.out.printf("%s MOVE %s %s\n", this.m_id, col, row);
-        }
-
-        public void SHOOT(Unit unit){
-            System.err.printf("%s SHOOT %s", this.m_id, unit.m_id);
-        }
-
-        public void CONVERT(Unit unit){
-            System.err.printf("%s CONVERT %s", this.m_id, unit.m_id);
-        }                
-    
-        public String toString(){
-            return String.format("[%02d, %02d] %s : id = %02d, hp = %02d, type = %s", m_row, m_col, padStrOwner(m_ownerID), m_id, m_hp, m_type.toString());
-        }
-    
+        return bestAction;
     }
 
-    // PARSING FUNCTIONS
-
-    private static void INIT(Scanner in){
-
-        myId = in.nextInt(); 
-        mapWidth = in.nextInt(); 
-        mapHeight = in.nextInt();
-        
-        tiles = new Tile[mapHeight][mapWidth];
-
-        for (int i = 0; i < mapHeight; i++) {
-
-            String[] mapLine = in.next().split("");
-
-            for (int j = 0; j < mapLine.length; j++){
-
-                if(mapLine[j] == "x"){
-                    tiles[i][j] = new Tile(j, i, TileType.OBSTACLE);
-                }
-                else{
-                    tiles[i][j] = new Tile(j, i, TileType.FLOOR);
-                }
-            }
-        }        
+    public static String getInstructionsFor(int myPosition, int runeIDToSet, String letterToSet){
+        return MOVE_TO(myPosition, runeIDToSet) + trySetLetter(runes[runeIDToSet], letterToSet) + ".";
     }
 
-    private static void UPDATE(Scanner in){
+    public static String trySetLetter(String actualLetter, String letter){
 
-        myLeader = null;
-        ennemyLeader = null; 
+        int runeIndex = getCharIndex(actualLetter);
+        int letterIndex = getCharIndex(letter);
 
-        myUnits = new ArrayList<Unit>();
-        ennemyUnits = new ArrayList<Unit>();
-        neutralUnits = new ArrayList<Unit>();
-        allUnits = new HashMap<Integer, Unit>();
+        String instruction = "";
+        int repeatCount = minimizeDelta(letterIndex - runeIndex);
 
-        int numOfUnits = in.nextInt();
-
-        for (int i = 0; i < numOfUnits; i++) {
-
-            int unitId = in.nextInt();      // The unit's ID
-            int unitType = in.nextInt();    // The unit's type: 0 = Cultist, 1 = Cult Leader
-            int hp = in.nextInt();          // Health points of the unit
-            int col = in.nextInt();         // X coordinate of the unit
-            int row = in.nextInt();         // Y coordinate of the unit
-            int owner = in.nextInt();       // id of owner player
-
-            Unit unit = new Unit(unitId, hp, row, col, owner, unitType);
-
-            allUnits.put(unitId, unit);
-
-            // put the unit in the good collection
-
-            if(owner == myId){
-                myUnits.add(unit);
-            }
-            else if(owner == 2){
-                neutralUnits.add(unit);
-            }
-            else{
-                ennemyUnits.add(unit);
-            }
-
-            // set my leader or ennemyLeader
-
-            if(unit.getType() == UnitType.CULTLEADER){
-                
-                if(unit.isFriend()){
-                    myLeader = unit;
-                }
-                else if(unit.isEnnemy()){
-                    ennemyLeader = unit;
-                }
-            }
-        }        
-    }
-
-    // GENERIC FUNCTIONS
-    
-    private static Unit getUnitAt(int row, int col){
-        return tiles[row][col].getUnit();
-    }
-
-    private static int evalDamage(Unit shooter, Unit victim){
-        return 7 - getDistance(shooter, victim);
-    }
-
-    private static int getDistance(Unit unitA, Unit unitB){
-        return Math.abs(unitA.getRow() - unitB.getRow()) + Math.abs(unitA.getCol() - unitB.getCol());
-    }
-
-    private static String padStrOwner(int ownerID){
-
-        String strOwner = "";
-        int maxWidth = 10;
-
-        if(ownerID == myId){
-            strOwner = PadString("Friend", maxWidth);
-        }
-        else if(ownerID == 2){
-            strOwner = PadString("Neutral", maxWidth);
-        }
-        else{
-            strOwner = PadString("Ennemy", maxWidth);
-        }
-
-        return strOwner;
-    }
-
-    private static String PadString(String mStr, int maxWidth){
-
-        if(mStr.length() >= maxWidth){
-            return mStr;
+        if(repeatCount > 0){
+            instruction += repeat("+", repeatCount);
         }else{
-
-            String[] padSpaces = new String[maxWidth - mStr.length()];
-            Arrays.fill(padSpaces, " ");
-
-            return mStr + String.join("", padSpaces);
+            instruction += repeat("-", -repeatCount);
         }
+
+        return instruction;
     }    
 
-    public Tile getTileAfterShoot(Tile startTile, Tile targetTile) {
 
-        int x0, y0, x1, y1;
 
-        if (startTile.getRow() < targetTile.getRow()) {
-
-            x0 = startTile.getCol();
-            y0 = startTile.getRow();
-            
-            x1 = targetTile.getCol();
-            y1 = targetTile.getRow();
-
-        } else {
-
-            x0 = targetTile.getCol();
-            y0 = targetTile.getRow();
-            
-            x1 = startTile.getCol();
-            y1 = startTile.getRow();
-        }
-
-        int dx = Math.abs(x1 - x0);
-        int dy = Math.abs(y1 - y0);
-    
-        int sx = x0 < x1 ? 1 : -1;
-        int sy = y0 < y1 ? 1 : -1;
-    
-        int err = dx - dy;
-        int currentX = x0;
-        int currentY = y0;
-    
-        while (true) {
-
-            int e2 = 2 * err;
-            
-            if (e2 > -1 * dy) {
-                err -= dy;
-                currentX += sx;
-            }
-    
-            if (e2 < dx) {
-                err += dx;
-                currentY += sy;
-            }
-    
-            if (currentX == x1 && currentY == y1) break;
-
-            boolean isObstacle = tiles[currentX][currentY].getType().equals(TileType.OBSTACLE);
-            boolean isUnit = tiles[currentX][currentY].getUnit() != null && tiles[currentX][currentY].getUnit().isInGame;
-
-            if (isObstacle || isUnit) {
-                return tiles[currentX][currentY];
-            }
-        }
-        return targetTile;
-
+    public static boolean letterExists(String letter){
+        return Arrays.asList(runes).indexOf(letter) > 0;
     }
+    
+    public static Map<String, Integer> getPatterns(String phrase){
 
-    // PAHTFINDING
+        Map<String, Integer> patterns = new HashMap<String, Integer>();
 
-    // PATHFINDING FUNCTIONS
+        for(int len = 2; len < phrase.length(); len++){
 
-    public static class Border extends Tile{
+            String beginPattern = phrase.substring(0, len);
+            String endPattern = phrase.substring(phrase.length() - len, phrase.length());
 
-        // this class represents a border of exploration points, it is used to find the path to the loot
+            int beginCount = phrase.split(beginPattern, -1).length - 1;
+            int endCount = phrase.split(endPattern, -1).length - 1;
 
-        private String action;
-        private List<Border> parentList;
-        private int row;
-        private int col;
+            if(beginCount > 1 && !patternIsIn(patterns, beginPattern)){
+                patterns.put(beginPattern, beginCount);
+            }
 
-        public Border(int mRow, int mCol, String mAction, Border mParent){
-
-            super(mCol, mRow, TileType.BORDER);
-            
-            row = mRow;
-            col = mCol;
-            action = mAction;
-
-            if(mParent == null){
-                parentList = new ArrayList<Border>();
-                parentList.add(this);
-            }else{
-                parentList = new ArrayList<Border>(mParent.parentList);               
-                parentList.add(this);
+            if(endCount > 1 && !patternIsIn(patterns, endPattern)){
+                patterns.put(endPattern, endCount);
             }            
         }
 
-        public String FirstAction(){
-            return parentList.get(1).action;
-        }
-
-        public int TotalDist(){
-            return parentList.size();
-        }
-    
-        public String toString(){
-            
-            String[] parentCoords = new String[parentList.size()];
-
-            for (int i = 0; i < parentList.size(); i++) {
-                parentCoords[parentList.size() - i - 1] = String.format("[%s, %s]", parentList.get(i).row, parentList.get(i).col);
-            }
-
-            return String.join(" <- ", parentCoords);
-        }
+        return patterns;
     }
 
-    public static Border FindShortPath(Tile startTile, Tile destTile) {
-
+    private static boolean patternIsIn(Map<String, Integer> patternsDico, String patternToFind){
         
-
-        List<Border> borders = new ArrayList<Border>();
-        borders.add(new Border(startTile.getRow(), startTile.getCol(), null, null));
-
-        boolean[][] investigatePoints = new boolean[mapHeight][mapWidth];
-
-        investigatePoints[startRow][startCol] = true;
-
-        Border bestBorder = null;
-
-        while(borders.size() > 0 && bestBorder == null){
-
-            List<Border> bordersTemp = new ArrayList<Border>(borders);
-
-            for(Border border : bordersTemp){
-
-                borders.remove(borders.indexOf(border));
-
-                for(String strDir : directions.keySet()){
-
-                    int[] nextPoint = GetNextPoint(border.row, border.col, strDir);
-
-                    int nextRow = nextPoint[0];
-                    int nextCol = nextPoint[1];
-
-                    if(IsPointOnMap(nextRow, nextCol)){
-
-                        boolean isWalkable = walkablePoints[nextRow][nextCol];
-
-                        if(!investigatePoints[nextRow][nextCol] && isWalkable){
-
-                            Border mNewBorder = new Border(nextRow, nextCol, strDir, border);
-
-                            if(nextRow == destRow && nextCol == destCol){
-                                bestBorder = mNewBorder;
-                            }
-                            
-                            borders.add(mNewBorder);                            
-                        }
-
-                        investigatePoints[nextRow][nextCol] = true;
-                    }
-                }
-            }
+        for(String pattern : patternsDico.keySet()){
+            if(patternToFind.contains(pattern)) return true;
         }
-
-        return bestBorder;
+        return false;
     }
 
-    /* public static Border getCloserUnitPath(Unit unitFrom){
+    public static void main_OLD(){
 
-        Border closerEnnemy = null;
+        INITIALIZE();
 
-        int minDist = Integer.MAX_VALUE;
+        writeAllUsedLetters();
 
-        for (int i = 0; i < ennemyCoords.size(); i++){
+        int lastRuneID = myPosition + 1;
 
-            int ennemyRow = ennemyCoords.get(i)[0];
-            int ennemyCol = ennemyCoords.get(i)[1];
+        for(int i = 0; i < magicPhrase.length(); i++){
 
-            Border ennemyPath = FindShortPath(ennemyRow, ennemyCol, destRow, destCol);
+            String currentLetter = magicPhrase.substring(i, i + 1);
 
-            if(ennemyPath != null){
-                if(ennemyPath.TotalDist() <= minDist) closerEnnemy = ennemyPath;            
+            int runeID = findRune(currentLetter);
+            instructions += MOVE_TO(myPosition, runeID) +".";
+            //instructions += setLetter(0, currentLetter) + ".";
+        }         
+
+        System.err.println(instructions.length());
+
+        PRINT_INSTRUCTIONS();
+    }
+
+    private static String MOVE_TO(int actualPosition, int runeID){
+        
+        int delta = runeID - actualPosition;
+        actualPosition = runeID;
+        
+        if(delta > 0){
+            return repeat(">", delta);
+        }
+        else if(delta < 0){
+            return repeat("<", -delta);
+        }
+        else{
+            return "";
+        }
+    }
+
+    private static void writeAllUsedLetters(){
+
+        String withoutDuplicates = removeStringDuplicates(magicPhrase);
+        
+        System.err.printf("%s : %s\n", withoutDuplicates.length(), withoutDuplicates);        
+
+        for(int i = 0; i < withoutDuplicates.length(); i++){
+
+            String currentLetter = withoutDuplicates.substring(i, i + 1);
+
+            instructions += setLetter(myPosition, currentLetter);
+            if(i < withoutDuplicates.length() - 1) MOVE_RIGHT();
+        }        
+    }
+
+    private static String repeat(String s, int count){
+        return new String(new char[count]).replace("\0", s);
+    }
+
+    public static int getCharIndex(String charLetter){
+        return Arrays.asList(letters).indexOf(charLetter);
+    }
+
+    public static int findRune(String letter){
+        return Arrays.asList(runes).indexOf(letter);
+    }
+
+    public static String setLetter(int runeID, String letter){
+
+        int runeIndex = getCharIndex(runes[runeID]);
+        int letterIndex = getCharIndex(letter);
+
+        String instruction = "";
+        int repeatCount = minimizeDelta(letterIndex - runeIndex);
+
+        if(repeatCount > 0){
+            instruction += repeat("+", repeatCount);
+        }else{
+            instruction += repeat("-", -repeatCount);
+        }
+
+        //System.err.printf("%s(%s) -> %s(%s) : %s (%s)\n", runes[runeID], runeIndex, letter, letterIndex, instruction, repeatCount);
+        
+        runes[runeID] = letter; 
+        
+        return instruction;
+    }
+
+    public static String resetRune(int runeID){
+
+        int runeIndex = getCharIndex(runes[runeID]);
+
+        if(runeIndex > 13){
+            return "[+]";
+        }else{
+            return "[-]";
+        }
+    }
+
+    public static int minimizeDelta(int delta){
+
+        if(delta > 13){
+            return delta - 27;
+        }   
+        else if(delta > 0 && delta <= 13){
+            return delta;
+        }   
+        else if(delta < 0 && delta >= -13) {
+            return delta;
+        }
+        else if(delta < -13){
+            return delta + 27;
+        }
+        else if(delta == 0){
+            return 0;
+        }
+        else{
+            System.err.println("errValue = " + delta);
+            assert false;
+            return - 1;
+        }
+    }
+
+    public static String removeStringDuplicates(String strWithDuplicates){
+
+        String strWithoutDuplicates = "";
+
+        for(int i = 0; i < strWithDuplicates.length(); i++){
+            CharSequence subString = strWithDuplicates.subSequence(i, i+1);
+            if(!strWithoutDuplicates.contains(subString) && !subString.equals(" ")){
+                strWithoutDuplicates += subString;
             }
         }
 
-        return closerEnnemy;
-    } */
+        return strWithoutDuplicates;
+    }    
+
+    public static void INITIALIZE(){
+
+        Scanner in = new Scanner(System.in);
+
+        magicPhrase = in.nextLine();
+        in.close();
+
+        instructions = "";        
+        runes = repeat(" ", 30).split("");
+        letters = " ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    }
+
+    public static void PRINT_INSTRUCTIONS(){
+
+        System.out.println(instructions);
+    }
+
+    public static void MOVE_RIGHT(){
+        instructions += ">";
+        myPosition = (myPosition + 1) % 30;
+    }
+
+    public static void MOVE_LEFT(){
+        instructions += "<";
+        myPosition = (myPosition - 1) % 30;
+    }
 
 }
