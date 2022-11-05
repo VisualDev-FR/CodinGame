@@ -43,13 +43,12 @@ class Player {
                 index++;
             }
 
-            debug(String.format("nb Occurences = %s, bestScore = %s, nbMoves = %s, nbZombies = %s, nbHumans = %s, moves : \n%s", 
+            debug(String.format("nb Occurences = %s, bestScore = %s, nbMoves = %s, nbZombies = %s, nbHumans = %s", 
                 index, 
                 bestScore, 
                 bestStrategy.getMovesCount(),
                 bestStrategy.getZombieCOunt(),
-                bestStrategy.getHumanCount(),
-                bestStrategy.getActions()
+                bestStrategy.getHumanCount()
             ));
             
             bestStrategy.printFirstMove();          
@@ -65,7 +64,6 @@ class Player {
         private int m_moveCount;
         private List<Coords> m_moves;
         private int m_score;
-        private List<String> actions;
 
         private Hero m_hero;
         private Map<Integer, Human> m_humanMap;
@@ -77,13 +75,8 @@ class Player {
             m_zombieMap = cloneZombieMap(zombieMap);            
             m_moveCount = random.nextInt(MAX_MOVE_COUNT);
             m_moves = new ArrayList<Coords>();
-            actions = new ArrayList<String>();
             m_hero = hero.clone();
             m_score = 0;
-        }
-
-        public String getActions(){
-            return String.join("\n", actions.toArray(new String[0]));
         }
 
         public int getHumanCount(){
@@ -94,14 +87,6 @@ class Player {
             return m_zombieMap.size();
         }
 
-        public String getMoves(){
-            String[] strMoves = new String[m_moves.size()];
-            for(int i = 0; i < m_moves.size(); i ++){
-                strMoves[i] = String.format("[%s]", m_moves.get(i).toString());
-            } 
-            return String.join("\n", strMoves);
-        }
-
         public int getMovesCount(){
             return m_moves.size();
         }
@@ -110,7 +95,7 @@ class Player {
             
             this.run();
 
-            if(m_humanMap.size() <= 1){ //|| m_moves.size() == 1
+            if(m_humanMap.size() <= 1){
                 return Integer.MIN_VALUE + 1;
             }
             else{
@@ -135,8 +120,6 @@ class Player {
             // Mise à jour du score
             int zombieKilled = zombieCountBeforeMove - m_zombieMap.size();
             m_score += getCombo(humanCountBeforeZombieUpdate, zombieKilled); 
-
-            actions.add(String.format("%02d : Ash[%s] %s", m_moves.size(), m_hero.getPosition().toString(), zombiesToString(m_zombieMap)));
         }
 
         private void run(){
@@ -235,18 +218,6 @@ class Player {
             return this.m_y;
         }
 
-        public void setX(int x){
-            this.m_x = x;
-        }
-
-        public void setY(int y){
-            this.m_y = y;
-        }
-
-        public boolean isValid(){
-            return m_x >= 0 && m_x < MAP_WIDTH && m_y >= 0 && m_y < MAP_HEIGHT;
-        }
-
         public double getDistance(Coords anotherPoint){
             return Math.sqrt((Math.pow((double)(this.m_x - anotherPoint.m_x), 2) + Math.pow((double)(this.m_y - anotherPoint.m_y), 2)));
         }        
@@ -304,10 +275,6 @@ class Player {
 
         public void move(Coords nextPosition){
             this.m_position = nextPosition.clone();
-        }
-
-        public String getStringCoords(){
-            return this.m_position.toString();
         }
 
         public String toString(){
@@ -476,21 +443,9 @@ class Player {
 
     // DEBUG FUNCTIONS
 
-    /* private static void debug(Object... args){
-        List<String> message = new ArrayList<String>();
-        for(Object arg : args){
-            message.add((String) arg);
-        }   
-        debug(String.join(" ", message.toArray(new String [0])));
-    } */
-
     private static void debug(String message){
         System.err.println(message);
     }
-    
-    private static void printIfNull(Object mObject, String message){
-        if(mObject == null) System.err.println(message + " is Null");
-    }    
 
     public static String zombiesToString(Map<Integer, Zombie> zombieMap){
 
