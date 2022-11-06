@@ -31,7 +31,7 @@ class Player {
             Strategy bestStrategy = null;
             int bestScore = Integer.MIN_VALUE;
 
-            while(getTimer(start) < 150){
+            while(getTimer(start) < 155){
 
                 Strategy randomStrategy = new Strategy(hero, humans, zombies);
                 int score = randomStrategy.getScore();
@@ -136,11 +136,8 @@ class Player {
                 // select random spoiled meat
                 Zombie nextZombie = m_zombieMap.values().toArray(new Zombie[0])[random.nextInt(m_zombieMap.size())];
 
-                // find and eat that f**ing good spoiled meat
+                // find and eat that tasty spoiled meat
                 while(m_zombieMap.containsKey(nextZombie.getID())){
-                    
-                    // set the next position of Ash for 
-                    //m_hero.findAndKill(nextZombie);
 
                     // Simulate that move
                     simulateOneMove(nextZombie.getPosition());
@@ -200,8 +197,8 @@ class Player {
 
         public static Coords getRandom(){
             
-            int randX = random.nextInt(Coords.MAP_WIDTH / 10) * 10;
-            int randY = random.nextInt(Coords.MAP_HEIGHT / 10) * 10;
+            int randX = random.nextInt(Coords.MAP_WIDTH);// / 10) * 10;
+            int randY = random.nextInt(Coords.MAP_HEIGHT);// / 10) * 10;
 
             return new Coords(randX, randY);
         }
@@ -445,17 +442,6 @@ class Player {
 
     private static void debug(String message){
         System.err.println(message);
-    }
-
-    public static String zombiesToString(Map<Integer, Zombie> zombieMap){
-
-        List<String> strZombies = new ArrayList<String>();
-
-        for(int zombieID : zombieMap.keySet()){
-            strZombies.add(String.format("Z%s[%s]", zombieID, zombieMap.get(zombieID).getPosition().toString()));
-        }
-
-        return String.join(" ", strZombies.toArray(new String[0]));
     }
 
     public static Map<Integer, Zombie> cloneZombieMap(Map<Integer, Zombie> mapToClone){
