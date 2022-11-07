@@ -18,6 +18,9 @@ class Player {
         fib = initFibonacci(45);
 
         debug("Seed = " + globalSeed);
+        
+        boolean isRectangle = false;
+        boolean firstTurn = true;
 
         while (true) {
 
@@ -27,6 +30,17 @@ class Player {
             hero = parseHero(in);
             humans = parseHumans(in, hero);
             zombies = parseZombies(in, humans);
+
+            if(firstTurn){
+                isRectangle = isRectangle(humans);
+                firstTurn = false;
+            }
+
+            if(isRectangle){
+                debug("Rectangle...");
+                System.out.println(humans.get(0).getPosition().toString());
+                continue;
+            }
 
             Strategy bestStrategy = null;
             int bestScore = Integer.MIN_VALUE;
@@ -50,7 +64,6 @@ class Player {
                 bestStrategy.getZombieCOunt(),
                 bestStrategy.getHumanCount()
             ));
-            
             bestStrategy.printFirstMove();          
         }
     }
@@ -160,7 +173,13 @@ class Player {
                 if(z.getDistanceFrom(m_hero) > Hero.MORTAL_RADIUS){
                     
                     // si des humains sont dans la zone mortelle du zombie, on les enlève du humanMap
-                    m_humanMap = z.removeKilledHumans(m_humanMap);
+                    //m_humanMap = z.removeKilledHumans(m_humanMap);
+
+                    Human zombieTarget = z.getTarget();
+
+                    if(z.getDistanceFrom(zombieTarget) <= Zombie.MORTAL_RADIUS && zombieTarget.getID() != -1){
+                        m_humanMap.remove(zombieTarget.getID());
+                    }
 
                     if(m_humanMap.size() <= 1) return new HashMap<Integer, Zombie>();
 
@@ -186,6 +205,7 @@ class Player {
         
         private static final int MAP_WIDTH = 16000;
         private static final int MAP_HEIGHT = 9000;
+        private static final int RAND_RANGE = 707;
         
         public int m_x;
         public int m_y;
@@ -201,6 +221,22 @@ class Player {
             int randY = random.nextInt(Coords.MAP_HEIGHT);// / 10) * 10;
 
             return new Coords(randX, randY);
+        }
+
+        public static Coords getRandomFrom(Coords coords){
+
+            Coords randCoord = new Coords(-1, -1);
+
+            while(!randCoord.isValid()){
+                int randX = randBetween(coords.getX() - Coords.RAND_RANGE, coords.getX() + Coords.RAND_RANGE);
+                int randY = randBetween(coords.getY() - Coords.RAND_RANGE, coords.getY() + Coords.RAND_RANGE);    
+                randCoord = new Coords(randX, randY);                
+            }
+            return randCoord;
+        }
+
+        public boolean isValid(){
+            return this.m_x >= 0 && this.m_x < MAP_WIDTH && this.m_y >= 0 && this.m_y < MAP_HEIGHT;
         }
 
         public Coords clone(){
@@ -364,6 +400,24 @@ class Player {
 
     // PARSING FUNCTIONS
 
+    public static boolean isRectangle(Map<Integer, Human> humanMap){
+
+        if(humanMap.size() != 5) return false;       
+
+        Map<Integer, Integer> distanceMap = new HashMap<Integer, Integer>();
+
+        for(Human human1 : humanMap.values()){
+            for(Human human2 : humanMap.values()){
+                if(human1.getID() != -1 && human2.getID() != -1 && human1.getID() != human2.getID()){
+                    int distance = human1.getDistanceFrom(human2);
+                    distanceMap.putIfAbsent(distance, distance);
+                }
+            }            
+        }
+        boolean boolRectangle = distanceMap.size() == 3;
+        debug("Rectangle = " + boolRectangle + " " + distanceMap.toString());
+        return boolRectangle;
+    }
 
     public static int getCombo(int humanLeft, int killCount){
 
@@ -466,4 +520,7 @@ class Player {
         return clonedMap;
     }
 
+    public static int randBetween(int min, int max){
+        return random.nextInt((max - min) + 1) + min;
+    }
 }
