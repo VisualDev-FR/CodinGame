@@ -2,525 +2,435 @@ import java.util.*;
 
 class Player {
 
-    private static Map<Integer, Human> humans;
-    private static Map<Integer, Zombie> zombies;
-    private static Hero hero;
-    private static int[] fib;
-    private static Random random;
-    private static long globalSeed;
+    private static int nbOfPlayer;
+    private static int activePlayerCount;
+    private static int gameTurn;
+    
+    private static Map<String, int[]> directions;
+    private static List<String> comments;
+    private static int myID;
+    private static Grid gameGrid;
+
+    private static final int PLAYS_COUNT = 100;
+    private static final String MAP_PLAYER = "@";
+    private static final String MAP_ENNEMY = "!";
+    private static final String MAP_BLANK  = ".";
+    private static final String MAP_BORDER = "#";
 
     public static void main(String args[]) {
-        
+
         Scanner in = new Scanner(System.in);
-        
-        globalSeed = new Random().nextLong();
-        random = new Random(globalSeed);
-        fib = initFibonacci(45);
 
-        debug("Seed = " + globalSeed);
-        
-        boolean isRectangle = false;
-        boolean firstTurn = true;
+        LightCycle[] lightCycles = initLightCycles();
 
-        while (true) {
+        while (true){
 
-            long start = System.currentTimeMillis();
-            int index = 0;
+            comments = new ArrayList<String>();
 
-            hero = parseHero(in);
-            humans = parseHumans(in, hero);
-            zombies = parseZombies(in, humans);
+            lightCycles = updateLightCycles(in, lightCycles);
 
-            if(firstTurn){
-                isRectangle = isRectangle(humans);
-                firstTurn = false;
-            }
-
-            if(isRectangle){
-                debug("Rectangle...");
-                System.out.println(humans.get(0).getPosition().toString());
-                continue;
-            }
-
-            Strategy bestStrategy = null;
-            int bestScore = Integer.MIN_VALUE;
-
-            while(getTimer(start) < 155){
-
-                Strategy randomStrategy = new Strategy(hero, humans, zombies);
-                int score = randomStrategy.getScore();
-
-                if(score > bestScore){                    
-                    bestScore = score;
-                    bestStrategy = randomStrategy;                    
-                }
-                index++;
-            }
-
-            debug(String.format("nb Occurences = %s, bestScore = %s, nbMoves = %s, nbZombies = %s, nbHumans = %s", 
-                index, 
-                bestScore, 
-                bestStrategy.getMovesCount(),
-                bestStrategy.getZombieCOunt(),
-                bestStrategy.getHumanCount()
-            ));
-            bestStrategy.printFirstMove();          
+            System.err.println(lightCycles[myID].toString());
+            gameGrid.Print();
+            
+            System.out.println("LEFT");
         }
     }
 
     // CLASSES
 
-    private static class Strategy{
+    public static class Border{
+
+        private List<Border> parentList;
+        private int row;
+        private int col;
+
+        public Border(int mRow, int mCol, Border mParent){
+            
+            row = mRow;
+            col = mCol;
+            parentList = new ArrayList<Border>(mParent.parentList);
+            parentList.add(mParent);
+                        
+        }
+
+        public Border(int mRow, int mCol){
+            parentList = new ArrayList<Border>();
+            row = mRow;
+            col = mCol;
+        }
+
+        public int TotalDist(){
+            return parentList.size();
+        }
+    }     
+
+    public static class LightCycle{
+
+        public int ID;
+        public int startRow;
+        public int startCol;
+        public int row;
+        public int col;
+
+        public int voronoiSurface;
+        public int diffusedSurface;
+
+        public boolean erased;
+        public List<int[]> coords;
         
-        private final int MAX_MOVE_COUNT = 3;
+        public LightCycle(int mID){
+            coords = new ArrayList<int[]>();
+            ID = mID;
+            erased = false;
+        }
 
-        private int m_moveCount;
-        private List<Coords> m_moves;
+        public LightCycle clone(){
+
+            LightCycle mNewLightCycle = new LightCycle(this.ID);
+
+            mNewLightCycle.coords = new ArrayList<>(this.coords);
+
+            mNewLightCycle.startRow = this.startRow;
+            mNewLightCycle.startCol = this.startCol;
+            mNewLightCycle.row = this.row;
+            mNewLightCycle.col = this.col;
+            mNewLightCycle.voronoiSurface = this.voronoiSurface;
+            mNewLightCycle.diffusedSurface = this.diffusedSurface;
+            mNewLightCycle.erased = this.erased;
+
+            return mNewLightCycle;
+        }
+
+        public void Erase(){
+
+            for(int[] coord : coords){
+                gameGrid.setBlank(coord[0], coord[1]);
+            }           
+        }
+
+        public boolean IsDead(){
+            return startRow == -1;
+        }
+
+        public LightCycle Update(Scanner in){
+
+            startCol = in.nextInt();    // starting X coordinate of lightcycle (or -1)
+            startRow = in.nextInt();    // starting Y coordinate of lightcycle (or -1)
+            col = in.nextInt();         // starting X coordinate of lightcycle (can be the same as X0 if you play before this player)
+            row = in.nextInt();         // starting Y coordinate of lightcycle (can be the same as Y0 if you play before this player)
+
+            if(!IsDead()){
+                coords.add(new int[]{row, col});
+                gameGrid.setPlayer(row, col, this.ID); 
+                gameGrid.setPlayer(startRow, startCol, this.ID); 
+            }else if(!erased){
+                Erase();
+                erased = true;
+                return null;
+            }
+
+            return this;
+        }
+    
+        public String toString(){
+            return String.format("%02d : [%s, %s]", ID, row, col);
+        }
+    }
+    
+    public static class Grid{
+
+        private String[][] arrayGrid;
+        private boolean[][] occupedPoints;
+
+        static final int GRID_WIDTH = 30;
+        static final int GRID_HEIGHT = 20;
+
+        // CONSTRUCTORS
+        
+        public Grid(){
+
+            arrayGrid = new String[GRID_HEIGHT][GRID_WIDTH];
+            occupedPoints = new boolean[GRID_HEIGHT][GRID_WIDTH];
+
+            for(int i = 0; i < arrayGrid.length; i++){
+                for(int j = 0; j < arrayGrid[0].length; j++){
+                    arrayGrid[i][j] = MAP_BLANK;
+                }
+            }
+        }
+
+        public Grid clone(){
+
+            Grid mNewGrid = new Grid();
+
+            mNewGrid.arrayGrid = this.arrayGrid.clone();
+            mNewGrid.occupedPoints = this.occupedPoints.clone();
+
+            for (int i = 0; i < GRID_HEIGHT; i++){
+                mNewGrid.arrayGrid[i] = this.arrayGrid[i].clone();
+                mNewGrid.occupedPoints[i] = this.occupedPoints[i].clone();
+            }
+
+            return mNewGrid;
+        }
+
+        // VALUES HANDLING
+
+        public boolean canGoto(int row, int col){
+            return row >= 0 && row < GRID_HEIGHT && col >= 0 && col < GRID_WIDTH && !occupedPoints[row][col];
+        }
+
+        public String get(int row, int column){            
+            return arrayGrid[row][column];
+        }
+
+        public Grid setPlayer(int row, int column, int playerID){
+            arrayGrid[row][column] = Integer.toString(playerID);
+            occupedPoints[row][column] = true;
+            return this;
+        }
+
+        public Grid setBlank(int row, int col){
+            arrayGrid[row][col] = MAP_BLANK;
+            occupedPoints[row][col] = false;
+            return this;
+        }
+
+        public boolean isPointReachable(int row, int col){
+
+            boolean isReachable = false;
+
+            if(isPointOnGrid(row, col)){
+                isReachable = !occupedPoints[row][col];
+            }
+
+            return isReachable;
+        }
+
+        public boolean isPointOnGrid(int row, int col){
+            return row >= 0 && row < GRID_HEIGHT && col >= 0 && col < GRID_WIDTH;
+        }
+
+        // PARSING FUNCTIONS
+
+        /* public int GetVoronoiSurface(int playerID){
+
+            int voronoiSurface = 0;
+    
+            for (int i = 0; i < this.arrayGrid.length; i++){
+    
+                for (int j = 0; j < this.arrayGrid[0].length; j++) {
+                    
+                    int closerOpp = GetCloserPlayer_Absolute(i, j);
+    
+                    if(closerOpp == playerID) voronoiSurface++;                
+                }            
+            }
+
+            //comments.add("Voronoi for player " + playerID + " = " + voronoiSurface);
+    
+            return voronoiSurface;
+        }  */
+
+        public int GetDiffusedSurface(int startRow, int startCol){
+
+            List<int[]> borders = new ArrayList<int[]>();
+            boolean[][] visitedPoints = new boolean[GRID_HEIGHT][GRID_WIDTH];
+    
+            borders.add(new int[]{startRow, startCol});
+    
+            int bordersCount = 1;
+    
+            while(borders.size() > 0){
+    
+                List<int[]> bordersTemp = new ArrayList<int[]>(borders);
+    
+                for(int[] border : bordersTemp){
+    
+                    borders.remove(borders.indexOf(border));
+    
+                    for(int[] direction : directions.values()){
+    
+                        int borderRow = border[0] + direction[0];
+                        int borderCol = border[1] + direction[1];
+        
+                        if(isPointReachable(borderRow, borderCol)){
+    
+                            if(visitedPoints[borderRow][borderCol] == false){
+    
+                                visitedPoints[borderRow][borderCol] = true;
+                                borders.add(new int[]{borderRow, borderCol});
+                                bordersCount++;
+                            }
+                        }
+                    }
+                }
+            }
+    
+            return bordersCount;
+        }
+
+        // PRINTING METHODS
+
+        /* public void PrintVoronoi(){
+
+            Grid gridTemp = this.clone();
+            
+            for (int i = 0; i < gridTemp.arrayGrid.length; i++){
+
+                for (int j = 0; j < gridTemp.arrayGrid[0].length; j++) {
+                    
+                    int closerOpp = GetCloserPlayer_Absolute(i, j);
+    
+                    gridTemp.setPlayer(i, j, closerOpp);                
+                }            
+            }
+
+            gridTemp.Print();
+        } */
+
+        public void Print(){
+            for(int i = 0; i < arrayGrid.length; i++){
+                System.err.println(String.join(" ", arrayGrid[i]));
+            }
+        }
+    }
+    
+    public static class Simulation{
+
+        private List<LightCycle> m_LightCycles;
+        private Grid m_grid;
+        private int m_rowStart;
+        private int m_colStart;
         private int m_score;
+        private long m_start;
+        private long m_timer;
 
-        private Hero m_hero;
-        private Map<Integer, Human> m_humanMap;
-        private Map<Integer, Zombie> m_zombieMap;
-
-        public Strategy(Hero hero, Map<Integer, Human> humanMap, Map<Integer, Zombie> zombieMap){
-
-            m_humanMap = cloneHumanMap(humanMap);
-            m_zombieMap = cloneZombieMap(zombieMap);            
-            m_moveCount = random.nextInt(MAX_MOVE_COUNT);
-            m_moves = new ArrayList<Coords>();
-            m_hero = hero.clone();
-            m_score = 0;
-        }
-
-        public int getHumanCount(){
-            return m_humanMap.size();
-        }
-
-        public int getZombieCOunt(){
-            return m_zombieMap.size();
-        }
-
-        public int getMovesCount(){
-            return m_moves.size();
+        public Simulation(Grid grid, int[] direction, List<LightCycle> lightCycles){
+            m_LightCycles = lightCycles;
+            m_grid = grid;
+            m_rowStart = lightCycles.get(myID).row + direction[0];
+            m_colStart = lightCycles.get(myID).col + direction[1];            
         }
 
         public int getScore(){
-            
-            this.run();
 
-            if(m_humanMap.size() <= 1){
-                return Integer.MIN_VALUE + 1;
-            }
-            else{
-                return m_score;
-            }
-        }
+            m_start = System.currentTimeMillis();
 
-        public void simulateOneMove(Coords nextTargetPoint){
-            
-            // Calcul de la prochaine position pour atteindre la target
-            Coords nextPosition = m_hero.getPosition().getNextCoords(Hero.SPEED, nextTargetPoint);
-
-            // Mise à jour de la position de Ash
-            m_moves.add(nextPosition);
-            m_hero.move(nextPosition);
-
-            // mise à jour de la position des zombies
-            int humanCountBeforeZombieUpdate = m_humanMap.size() - 1;
-            int zombieCountBeforeMove = m_zombieMap.size();
-            m_zombieMap = updateZombiePositions();
-
-            // Mise à jour du score
-            int zombieKilled = zombieCountBeforeMove - m_zombieMap.size();
-            m_score += getCombo(humanCountBeforeZombieUpdate, zombieKilled); 
-        }
-
-        private void run(){
-
-            // n random moves, in random positions
-            for(int i = 0; i < m_moveCount; i ++){
-                Coords nextTargetPoint = Coords.getRandom();
-                simulateOneMove(nextTargetPoint);
+            for(int i = 0; i < PLAYS_COUNT; i++){
+                endGame();
             }
 
-            // Kill all remaining zombies
-            while(m_zombieMap.size() > 0){
+            m_timer = System.currentTimeMillis() - m_start;   
 
-                // select random spoiled meat
-                Zombie nextZombie = m_zombieMap.values().toArray(new Zombie[0])[random.nextInt(m_zombieMap.size())];
-
-                // find and eat that tasty spoiled meat
-                while(m_zombieMap.containsKey(nextZombie.getID())){
-
-                    // Simulate that move
-                    simulateOneMove(nextZombie.getPosition());
-
-                    // if all humans died, we stop here to investigate better possibilities
-                    if(m_humanMap.size() <= 1) return;
-                }
-            }
+            return m_score;
         }
 
-        private Map<Integer, Zombie> updateZombiePositions(){
+        private void endGame(){
 
-            Map<Integer, Zombie> updatedZombies = new HashMap<Integer, Zombie>();
+            Random rand = new Random();
 
-            for(Zombie z : m_zombieMap.values()){
+            List<LightCycle> lightCycles = new ArrayList<LightCycle>(m_LightCycles);
+            Grid gameGrid = m_grid.clone();
 
-                z.move(z.getPosition().getNextCoords(Zombie.SPEED, z.getTarget().getPosition()));
-
-                // Si le zombie est en dehors de la zone mortelle, on met à jour sa position  et sa direction, sinon on ne le rajoute pas dans la sortie
-                if(z.getDistanceFrom(m_hero) > Hero.MORTAL_RADIUS){
-                    
-                    // si des humains sont dans la zone mortelle du zombie, on les enlève du humanMap
-                    //m_humanMap = z.removeKilledHumans(m_humanMap);
-
-                    Human zombieTarget = z.getTarget();
-
-                    if(z.getDistanceFrom(zombieTarget) <= Zombie.MORTAL_RADIUS && zombieTarget.getID() != -1){
-                        m_humanMap.remove(zombieTarget.getID());
-                    }
-
-                    if(m_humanMap.size() <= 1) return new HashMap<Integer, Zombie>();
-
-                    // On met à jour la cible du zombie
-                    z.setTarget(z.findTarget(m_humanMap));
-                    
-                    updatedZombies.put(z.getID(), z);
-                }
+            for(LightCycle l : lightCycles){
+                l = l.clone();
             }
 
-            return updatedZombies;
-        }
-
-        public void printFirstMove(){
-            
-            Coords firstMove = m_moves.size() > 0 ? m_moves.get(0) : m_hero.getPosition().clone();
-            
-            System.out.println(firstMove.toString());
-        }
-    }
-
-    private static class Coords{
-        
-        private static final int MAP_WIDTH = 16000;
-        private static final int MAP_HEIGHT = 9000;
-        private static final int RAND_RANGE = 707;
-        
-        public int m_x;
-        public int m_y;
-
-        public Coords(int x, int y){
-            this.m_x = x;
-            this.m_y = y;
-        }
-
-        public static Coords getRandom(){
-            
-            int randX = random.nextInt(Coords.MAP_WIDTH);// / 10) * 10;
-            int randY = random.nextInt(Coords.MAP_HEIGHT);// / 10) * 10;
-
-            return new Coords(randX, randY);
-        }
-
-        public static Coords getRandomFrom(Coords coords){
-
-            Coords randCoord = new Coords(-1, -1);
-
-            while(!randCoord.isValid()){
-                int randX = randBetween(coords.getX() - Coords.RAND_RANGE, coords.getX() + Coords.RAND_RANGE);
-                int randY = randBetween(coords.getY() - Coords.RAND_RANGE, coords.getY() + Coords.RAND_RANGE);    
-                randCoord = new Coords(randX, randY);                
-            }
-            return randCoord;
-        }
-
-        public boolean isValid(){
-            return this.m_x >= 0 && this.m_x < MAP_WIDTH && this.m_y >= 0 && this.m_y < MAP_HEIGHT;
-        }
-
-        public Coords clone(){
-            return new Coords(m_x, m_y);
-        }
-
-        public int getX(){
-            return this.m_x;
-        }
-
-        public int getY(){
-            return this.m_y;
-        }
-
-        public double getDistance(Coords anotherPoint){
-            return Math.sqrt((Math.pow((double)(this.m_x - anotherPoint.m_x), 2) + Math.pow((double)(this.m_y - anotherPoint.m_y), 2)));
-        }        
-
-        public Coords getNextCoords(int speed, Coords target){
-
-            if(this.getDistance(target) <= speed){
-                return new Coords(target.m_x, target.m_y);
-            }
-            else{
-
-                double distance = this.getDistance(target);
-
-                int nextX = (int)(this.m_x + speed * (target.m_x - this.m_x) / distance);
-                int nextY = (int)(this.m_y + speed * (target.m_y - this.m_y) / distance);
-
-                return new Coords(nextX, nextY);
-            }
-        }
-
-        public String toString(){
-            return String.format("%s %s", m_x, m_y);
-        }
-    }
-
-    private static abstract class Entity{
-        
-        protected int m_ID;
-        protected Coords m_position;
-
-        public Entity(int id, int x, int y){
-            this.m_ID = id;
-            this.m_position = new Coords(x, y);            
-        }
-
-        public int getDistanceFrom(Entity anotherEntity){
-            return (int) Math.floor(this.m_position.getDistance(anotherEntity.m_position));
-        }
-
-        public int getX(){
-            return this.m_position.getX();
-        }
-
-        public int getY(){
-            return this.m_position.getY();
-        }
-
-        public int getID(){
-            return m_ID;
-        }
-
-        public Coords getPosition(){
-            return m_position;
-        }
-
-        public void move(Coords nextPosition){
-            this.m_position = nextPosition.clone();
-        }
-
-        public String toString(){
-            return String.format("%s : %s", m_ID, this.m_position.toString());
-        }
-    }
-
-    private static class Human extends Entity{
-
-        public Human(int id, int x, int y){
-            super(id, x, y);
-        }
-
-        public Human clone(){
-            return new Human(this.m_ID, this.m_position.getX(), this.m_position.getY());
-        }        
-    }
-
-    private static class Zombie extends Entity{
-
-        private static final int SPEED = 400;
-        private static final int MORTAL_RADIUS = 400;
-        private Coords m_targetCoords;
-        private Human m_target;
-
-        public Zombie(int id, int x, int y, int nextX, int nextY){
-            super(id, x, y);
-            m_targetCoords = new Coords(nextX, nextY);
-        }
-
-        public Zombie clone(){        
-            Zombie clone = new Zombie(this.m_ID, this.m_position.getX(), this.m_position.getY(), this.m_targetCoords.getX(), this.m_targetCoords.getY());
-            clone.setTarget(m_target); 
-            return clone;           
-        }
-
-        public void setTarget(Human human){
-            m_target = human;
-        }
-
-        public Human getTarget(){
-            return m_target;
-        }
-
-        public Map<Integer, Human> removeKilledHumans(Map<Integer, Human> humans){
-
-            Map<Integer, Human> remainingHumans = new HashMap<Integer, Human>();
-            
-            for(Human h : humans.values()){
-                if(this.getDistanceFrom(h) > Zombie.MORTAL_RADIUS || h.getID() == - 1){
-                    remainingHumans.put(h.getID(), h);
-                }
+            while(!lightCycles.get(myID).IsDead() && m_LightCycles.size() > 1){
+                playOneTurn();
             }
 
-            return remainingHumans;
+            m_score += lightCycles.get(myID).IsDead() ? 0 : 1;
         }
 
-        public Human findTarget(Map<Integer, Human> humansMap){
-            
-            double minDist = Double.MAX_VALUE;
-            Human closiestHuman = null;
+        private void playOneTurn(){
 
-            for(Human human : humansMap.values()){
-
-                double humanDist = this.m_position.getDistance(human.m_position);
-
-                if(humanDist < minDist){
-                    minDist = humanDist;
-                    closiestHuman = human;
-                }
-            }
-            return closiestHuman;
-        }
-
-    }
-
-    private static class Hero extends Human{
-        
-        private static final int SPEED = 1000;
-        private static final int MORTAL_RADIUS = 2000;        
-
-        public Hero(int x, int y){
-            super(-1, x, y);
-        }
-
-        public Hero clone(){
-            return new Hero(this.getX(), this.getY());
         }
     }
 
     // PARSING FUNCTIONS
 
-    public static boolean isRectangle(Map<Integer, Human> humanMap){
+    static LightCycle[] initLightCycles(){
 
-        if(humanMap.size() != 5) return false;       
+        gameGrid = new Grid();
 
-        Map<Integer, Integer> distanceMap = new HashMap<Integer, Integer>();
+        directions = new HashMap<String, int[]>();
+        directions.put("RIGHT", new int[]{ 0 ,  1});
+        directions.put("DOWN",  new int[]{ 1 ,  0});
+        directions.put("LEFT",  new int[]{ 0 , -1});
+        directions.put("UP",    new int[]{-1 ,  0});
 
-        for(Human human1 : humanMap.values()){
-            for(Human human2 : humanMap.values()){
-                if(human1.getID() != -1 && human2.getID() != -1 && human1.getID() != human2.getID()){
-                    int distance = human1.getDistanceFrom(human2);
-                    distanceMap.putIfAbsent(distance, distance);
-                }
+        LightCycle[] lightCycles = new LightCycle[4];
+
+        lightCycles[0] = new LightCycle(0);
+        lightCycles[1] = new LightCycle(1);
+        lightCycles[2] = new LightCycle(2);
+        lightCycles[3] = new LightCycle(3);
+
+        return lightCycles;
+    }
+
+    static LightCycle[] updateLightCycles(Scanner in, LightCycle[] lightCycles){
+
+        nbOfPlayer = in.nextInt();      // total number of players (2 to 4).
+        myID = in.nextInt();            // your player number (0 to 3).
+
+        for(int i = 0; i < nbOfPlayer; i++){
+
+            if(lightCycles[i] != null){
+                lightCycles[i] = lightCycles[i].Update(in);
+            }
+            else{
+                in.nextInt();
+                in.nextInt();
+                in.nextInt();
+                in.nextInt();
             }            
         }
-        boolean boolRectangle = distanceMap.size() == 3;
-        debug("Rectangle = " + boolRectangle + " " + distanceMap.toString());
-        return boolRectangle;
-    }
 
-    public static int getCombo(int humanLeft, int killCount){
-
-        int comboScore = 0;
-        for(int i = 0; i < killCount; i++){
-            comboScore += 10 * Math.pow(humanLeft, 2) * fib[i + 2];
+        for(int i = nbOfPlayer; i < 4; i++){
+            lightCycles[i] = null;
         }
 
-        return comboScore;
+        return lightCycles;
     }    
 
-    private static Map<Integer, Human> parseHumans(Scanner in, Entity hero){
-        
-        Map<Integer, Human> parsedHumans = new HashMap<Integer, Human>();
-        
-        int humanCount = in.nextInt();
-        for (int i = 0; i < humanCount; i++) {
-            int humanId = in.nextInt();
-            int humanX = in.nextInt();
-            int humanY = in.nextInt();
-            
-            parsedHumans.put(humanId, new Human(humanId, humanX, humanY));
+    // PRINTING FUNCTIONS
+
+/*     static int GetCloserPlayer_Absolute(int row, int col){
+
+        int minDist = 9999;
+        int closerPlayer = 0;
+
+        for(LightCycle player : lightCycles.values()){
+
+            if(!player.IsDead()){
+
+                int lightDist = GetDistance_Absolute(row, col, player.row, player.col);
+
+                if(lightDist < minDist){
+                    minDist = lightDist;
+                    closerPlayer = player.ID;
+                }
+            }
         }
 
-        parsedHumans.put(hero.getID(), (Human)hero);
-        
-        return parsedHumans;
-    }
-
-    private static Map<Integer, Zombie> parseZombies(Scanner in, Map<Integer, Human> humansMap){
-        
-        Map<Integer, Zombie> parsedZombies = new HashMap<Integer, Zombie>();
-
-        int zombieCount = in.nextInt();
-        for (int i = 0; i < zombieCount; i++) {
-            int zombieId = in.nextInt();
-            int zombieX = in.nextInt();
-            int zombieY = in.nextInt();
-            int zombieXNext = in.nextInt();
-            int zombieYNext = in.nextInt();
-
-            Zombie zombie = new Zombie(zombieId, zombieX, zombieY, zombieXNext, zombieYNext);
-            zombie.setTarget(zombie.findTarget(humansMap));
-        
-            parsedZombies.put(zombieId, zombie);
-        }
-
-        return parsedZombies;
-    }
-
-    private static Hero parseHero(Scanner in){
-        int x = in.nextInt();
-        int y = in.nextInt();        
-        return new Hero(x, y);
-    }
-
-    private static int[] initFibonacci(int maxIndex){
-
-        int[] fiboValues = new int[maxIndex];
-
-        fiboValues[0] = 0;
-        fiboValues[1] = 1;
-
-        for(int i = 2; i < maxIndex; i++){
-            fiboValues[i] = fiboValues[i - 1] + fiboValues[i - 2];
-        }
-
-        return fiboValues;
-    }    
+        return closerPlayer;
+    }  
     
-    private static long getTimer(long start){
-        return System.currentTimeMillis() - start;
+    static int GetDistance_Absolute(int row1, int col1, int row2, int col2){
+        return Math.abs(row1-row2) + Math.abs(col1-col2);
+    } */
+    
+        
+
+    public static void PRINT_COMMENTS(){
+        for(String comment : comments){
+            System.err.println(comment);
+        }        
     }
 
-    // DEBUG FUNCTIONS
 
-    private static void debug(String message){
-        System.err.println(message);
-    }
 
-    public static Map<Integer, Zombie> cloneZombieMap(Map<Integer, Zombie> mapToClone){
-
-        Map<Integer, Zombie> clonedMap = new HashMap<Integer, Zombie>();
-
-        for(int zombieID : mapToClone.keySet()){
-            clonedMap.put(zombieID, mapToClone.get(zombieID).clone());
-        }
-
-        return clonedMap;
-    }
-
-    public static Map<Integer, Human> cloneHumanMap(Map<Integer, Human> mapToClone){
-
-        Map<Integer, Human> clonedMap = new HashMap<Integer, Human>();
-
-        for(int humanID : mapToClone.keySet()){
-            clonedMap.put(humanID, mapToClone.get(humanID).clone());
-        }
-
-        return clonedMap;
-    }
-
-    public static int randBetween(int min, int max){
-        return random.nextInt((max - min) + 1) + min;
-    }
 }
