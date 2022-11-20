@@ -1,14 +1,16 @@
-import java.util.*;
+package Test;
+
 import Test.lineRacing;
+import java.util.*;
 
-class Player {
+public class Player {
 
-    private static Map<String, int[]> directions;
-    private static int nbOfPlayer;
-    private static int myID;
-    private static final int PLAYS_COUNT = 10;
+    public static Map<String, int[]> directions;
+    public static int nbOfPlayer;
+    public static int myID;
+    public static final int PLAYS_COUNT = 10;
 
-    public static void main(String args[]) {
+    private static void main(String args[]) {
 
         //main_Vanilla();
         //main_Minimax();
@@ -201,7 +203,7 @@ class Player {
             return livingSnakes == 1 || m_snakes[myID] == null;
         }
 
-        private int endGame(){
+        public int endGame(){
 
             Snake[] simSnakes = m_snakes.clone();
             Grid simGrid = m_grid.clone();
@@ -220,8 +222,9 @@ class Player {
             int index = 0;
             /* System.err.println("simIndex = " + index);
             simGrid.Print(); */
-            while(simSnakes[myID] != null && !this.isGameOver() && index < 10){
+            while(simSnakes[myID] != null && !this.isGameOver() && index < 2400){
                 playOneTurn(simGrid, simSnakes);
+                System.out.printf("TurnIndex = %s\n", index);
                 index++;
             }
             /* System.err.println("simIndex = " + index);
@@ -247,11 +250,26 @@ class Player {
                         int colNext = snakes[i].col + directions.get(m_firstMove)[1];                        
                         
                         snakes[i] = snakes[i].simUpdate(grid, rowNext, colNext);
+                        grid.update(snakes);
                     }
                     else{
-                        playSmart(grid, snakes, i);
+                        int[] direction = getRandomDirection();
+
+                        int rowNext = snakes[i].getRow() + direction[0];
+                        int colNext = snakes[i].getCol() + direction[1];
+
+                        while(!grid.canGoto(rowNext, colNext)){
+                            direction = getRandomDirection();
+                            rowNext = snakes[i].getRow() + direction[0];
+                            colNext = snakes[i].getCol() + direction[1];                            
+                        }
+
+                        snakes[i] = snakes[i].simUpdate(grid, rowNext, colNext);
+
                     }
                 }
+
+                grid.Print();
             }            
 
         }
@@ -259,10 +277,33 @@ class Player {
         private void playOneTurn(Grid grid, Snake[] snakes){
 
             for(int i = 0; i < nbOfPlayer; i++){
+
                 if(snakes[i] != null){
-                    playSmart(grid, snakes, i);
+
+                    if(i == myID){    
+                        playSmart(grid, snakes, myID);
+                    }
+                    else{
+                        int[] direction = getRandomDirection();
+
+                        int rowNext = snakes[i].getRow() + direction[0];
+                        int colNext = snakes[i].getCol() + direction[1];
+
+                        snakes[i].getPossibleMoves
+
+                        while(!grid.canGoto(rowNext, colNext)){
+                            direction = getRandomDirection();
+                            rowNext = snakes[i].getRow() + direction[0];
+                            colNext = snakes[i].getCol() + direction[1];                            
+                        }
+
+                        snakes[i] = snakes[i].simUpdate(grid, rowNext, colNext);
+
+                    }
                 }
-            } 
+
+                grid.Print();
+            }         
         }
 
         private void playSmart(Grid grid, Snake[] snakes, int playerID){
@@ -299,8 +340,8 @@ class Player {
             int rowNext = snakes[playerID].getRow() + bestDirection[0];
             int colNext = snakes[playerID].getCol() + bestDirection[1];
         
-            snakes[playerID] = snakes[playerID].simUpdate(m_grid, rowNext, colNext);
-            m_grid.update(snakes);
+            snakes[playerID] = snakes[playerID].simUpdate(grid, rowNext, colNext);
+            grid.update(snakes);
         }
     }    
 
@@ -318,6 +359,20 @@ class Player {
             coords = new ArrayList<int[]>();
             ID = mID;
         }
+
+        public Snake(int mID, int rowStart, int colStart, Grid grid){
+            coords = new ArrayList<>();
+
+            coords.add(new int[]{rowStart, colStart});
+            coords.add(new int[]{row, col});
+
+            ID = mID;
+            this.startRow = rowStart;
+            this.startCol = colStart;
+            this.row = rowStart;
+            this.col = colStart;
+            grid.setPlayer(this);
+        }        
 
         public Snake clone(){
 
@@ -401,6 +456,12 @@ class Player {
         
         public Grid(){
             this.arrayGrid = new String[GRID_HEIGHT][GRID_WIDTH];
+
+            for(int i = 0; i < GRID_HEIGHT; i++){
+                for (int j = 0; j < GRID_WIDTH; j++) {
+                    this.arrayGrid[i][j] = ".";
+                }
+            }
         }
 
         public Grid clone(){
@@ -416,12 +477,12 @@ class Player {
         }
 
         public Grid setPlayer(Snake snake){
-            arrayGrid[snake.getRow()][snake.getCol()] = ".";
+            arrayGrid[snake.getRow()][snake.getCol()] = Integer.toString(snake.getID()); //".";
             return this;
         }
 
         public Grid setBlank(int row, int col){
-            arrayGrid[row][col] = "";
+            arrayGrid[row][col] = ".";
             return this;
         }
 
@@ -430,7 +491,7 @@ class Player {
             boolean isReachable = false;
 
             if(this.isValid(row, col)){
-                return this.arrayGrid[row][col] != ".";
+                return this.arrayGrid[row][col] == ".";
             }
 
             return isReachable;
@@ -442,7 +503,7 @@ class Player {
 
         public void update(Snake[] snakes){
 
-            this.territories = new int[]{0, 0, 0, 0};
+            /* this.territories = new int[]{0, 0, 0, 0};
 
             for(int row = 0; row < GRID_HEIGHT; row++){
 
@@ -456,10 +517,13 @@ class Player {
                         }
                     }
                 }
-            }
+            } */
         }
 
         public void Print(){
+
+            lineRacing.clearConsole();
+
             for(int i = 0; i < arrayGrid.length; i++){
                 System.err.println(String.join(" ", arrayGrid[i]));
             }
@@ -730,7 +794,7 @@ class Player {
         return snakes;
     }    
 
-    private static Map<String, int[]> initDirections(){
+    public static Map<String, int[]> initDirections(){
 
         directions = new HashMap<String, int[]>();
 
@@ -748,5 +812,14 @@ class Player {
                 System.err.printf("snake %02d : %s (%s /100)\n", i, grid.getTerritory(snakes[i]), 100 * grid.getTerritory(snakes[i]) / (20*30));
             }
         }        
+    }
+
+    private static int randBetween(int min, int max){
+        return new Random().nextInt((max - min) + 1) + min;
+    }
+
+    public static int[] getRandomDirection(){
+
+        return (int[]) directions.values().toArray()[new Random().nextInt(directions.size())];
     }
 }
