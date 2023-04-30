@@ -1,0 +1,81 @@
+scrapping Global... (global = 354 / 691 479, local = 167 / 123 605, cp = 48 550)
+    Challenges, 324 / 49 041, 15 003
+    Combats de bots, 772 / 213 989, 19 050
+    Clash of Code, 9 745 / 554 516, 4 310
+    Optimisation, 569 / 34 120, 4 752
+    Taille de code, 25 / 50 113, 5 435
+
+scrapping Challenges... (global = 324 / 49 041, local = 116 / 16 420, cp = 15 003)
+    Fall Challenge 2022 12.12.2022, 323 / 4 577, 5 232
+    Green Circle 16.06.2022, 135 / 1 758, 4 497
+    Spring Challenge 2022 21.04.2022, 407 / 7 695, 5 274
+
+scrapping Combats de bots... (global = 772 / 213 989, local = 303 / 51 842, cp = 19 050)
+    Ultimate Tic-Tac-Toe, 1 720 / 6 881, 595
+    Spider Attack, 298 / 8 583, 3 725
+    Keep Off The Grass, 434 / 4 659, 2 273
+    Tron Battle, 318 / 7 172, 3 452
+    Cultist Wars, 237 / 281, 4
+    Game of Drones, 1 003 / 4 045, 619
+    Green Circle, 41 / 1 787, 4 133
+    Mad Pod Racing, 3 438 / 179 358, 4 249
+
+scrapping Clash of Code... (global = 9 745 / 554 516, local = N/A, cp = 4 310)
+    Clash of Code, 9 745 / 554 516, 4 310
+
+scrapping Optimisation... (global = 569 / 34 120, local = 241 / 10 596, cp = 4 752)
+    Code vs Zombies, 203 / 17 569, 2 280
+    Block the spreading fire !, 125 / 493, 346
+    CodinGame Sponsored Challenge, 464 / 16 742, 2 013
+    A*Craft, 1 266 / 1 536, 21
+    Code of the Rings, 3 148 / 7 198, 87
+    Mars Lander, 5 090 / 6 466, 5
+
+scrapping Taille de code... (global = 25 / 50 113, local = 16 / 15 409, cp = 5 435)
+    Power of Thor TypeScript TypeScript, 20 / 372, 154
+    Power of Thor Java Java, 14 / 5 308, 198
+    Power of Thor C++ C++, 31 / 5 369, 194
+    Power of Thor VB.NET VB.NET, 52 / 246, 68
+    Power of Thor Python3 Python3, 32 / 9 585, 197
+    Power of Thor Javascript Javascript, 22 / 5 141, 196
+    ASCII Art - Code Golf TypeScript TypeScript, 13 / 47, 52
+    ASCII Art - Code Golf VB.NET VB.NET, 4 / 7, 21
+    ASCII Art - Code Golf Python3 Python3, 55 / 492, 112
+    ASCII Art - Code Golf Javascript Javascript, 24 / 168, 97
+    La descente - Code Golf TypeScript TypeScript, 20 / 56, 34
+    La descente - Code Golf VB.NET VB.NET, 7 / 16, 28
+    La descente - Code Golf Python3 Python3, 1 / 497, 200
+    La descente - Code Golf Javascript Javascript, 43 / 209, 70
+    Don't Panic VB.NET VB.NET, 24 / 82, 47
+    Don't Panic Python3 Python3, 69 / 3 549, 181
+    Don't Panic Javascript Javascript, 878 / 1 722, 14
+    Unary - Code Golf Java Java, 122 / 599, 69
+    Unary - Code Golf Python3 Python3, 313 / 3 237, 121
+    Unary - Code Golf Javascript Javascript, 127 / 1 164, 114
+    Températures TypeScript TypeScript, 51 / 322, 90
+    Températures Java Java, 205 / 2 604, 132
+    Températures C++ C++, 480 / 2 528, 74
+    Températures VB.NET VB.NET, 26 / 118, 64
+    Températures Python3 Python3, 80 / 7 681, 190
+    Températures Javascript Javascript, 136 / 3 445, 163
+    Températures Ruby Ruby, 1 035 / 1 229, 3
+    Des nains sur des épaules de géants - Code Golf TypeScript TypeScript, 2 / 49, 180
+    Des nains sur des épaules de géants - Code Golf Python3 Python3, 7 / 514, 189
+    Des nains sur des épaules de géants - Code Golf Javascript Javascript, 3 / 99, 180
+    Shadows of the Knight - Episode 1 - Code Golf TypeScript TypeScript, 9 / 49, 85
+    Shadows of the Knight - Episode 1 - Code Golf Python3 Python3, 24 / 443, 152
+    Shadows of the Knight - Episode 1 - Code Golf Javascript Javascript, 10 / 128, 138
+    Câblage réseau - Code Golf TypeScript TypeScript, 4 / 33, 124
+    Câblage réseau - Code Golf Python3 Python3, 13 / 524, 178
+    Câblage réseau - Code Golf Javascript Javascript, 4 / 101, 172
+    La résistance - Code Golf TypeScript TypeScript, 3 / 23, 127
+    La résistance - Code Golf Java Java, 4 / 132, 178
+    La résistance - Code Golf Python3 Python3, 315 / 319, 2
+    La résistance - Code Golf Javascript Javascript, 4 / 158, 181
+    Numéros de téléphone - Code Golf TypeScript TypeScript, 4 / 46, 142
+    Numéros de téléphone - Code Golf Python3 Python3, 7 / 527, 189
+    Numéros de téléphone - Code Golf Javascript Javascript, 9 / 113, 138
+    Calcul Maya - Code Golf VB.NET VB.NET, 4 / 6, 15
+    Calcul Maya - Code Golf Python3 Python3, 493 / 494, 2
+    Surface - Code Golf Java Java, 7 / 118, 153
+    Le labyrinthe - Code Golf Java Java, 6 / 124, 162

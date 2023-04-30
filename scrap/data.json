@@ -1,0 +1,1578 @@
+{
+    "2023/04/28 21:07:25": {
+        "Global": {
+            "global": "354 / 691\u00a0479",
+            "local": "167 / 123\u00a0605",
+            "cp": "48 550",
+            "rows": [
+                {
+                    "title": "Challenges",
+                    "rank": "324 / 49\u00a0041",
+                    "cp": "15\u00a0003"
+                },
+                {
+                    "title": "Combats de bots",
+                    "rank": "772 / 213\u00a0989",
+                    "cp": "19\u00a0050"
+                },
+                {
+                    "title": "Clash of Code",
+                    "rank": "9\u00a0746 / 554\u00a0519",
+                    "cp": "4\u00a0310"
+                },
+                {
+                    "title": "Optimisation",
+                    "rank": "569 / 34\u00a0120",
+                    "cp": "4\u00a0752"
+                },
+                {
+                    "title": "Taille de code",
+                    "rank": "25 / 50\u00a0113",
+                    "cp": "5\u00a0435"
+                }
+            ]
+        },
+        "Challenges": {
+            "global": "324 / 49\u00a0041",
+            "local": "116 / 16\u00a0420",
+            "cp": "15 003",
+            "rows": [
+                {
+                    "title": "Fall Challenge 2022 12.12.2022",
+                    "rank": "323 / 4\u00a0577",
+                    "cp": "5\u00a0232"
+                },
+                {
+                    "title": "Green Circle 16.06.2022",
+                    "rank": "135 / 1\u00a0758",
+                    "cp": "4\u00a0497"
+                },
+                {
+                    "title": "Spring Challenge 2022 21.04.2022",
+                    "rank": "407 / 7\u00a0695",
+                    "cp": "5\u00a0274"
+                }
+            ]
+        },
+        "Combats de bots": {
+            "global": "772 / 213\u00a0989",
+            "local": "303 / 51\u00a0842",
+            "cp": "19 050",
+            "rows": [
+                {
+                    "title": "Ultimate Tic-Tac-Toe",
+                    "rank": "1\u00a0720 / 6\u00a0881",
+                    "cp": "595"
+                },
+                {
+                    "title": "Spider Attack",
+                    "rank": "298 / 8\u00a0583",
+                    "cp": "3\u00a0725"
+                },
+                {
+                    "title": "Keep Off The Grass",
+                    "rank": "434 / 4\u00a0659",
+                    "cp": "2\u00a0273"
+                },
+                {
+                    "title": "Tron Battle",
+                    "rank": "318 / 7\u00a0172",
+                    "cp": "3\u00a0452"
+                },
+                {
+                    "title": "Cultist Wars",
+                    "rank": "237 / 281",
+                    "cp": "4"
+                },
+                {
+                    "title": "Game of Drones",
+                    "rank": "1\u00a0003 / 4\u00a0045",
+                    "cp": "619"
+                },
+                {
+                    "title": "Green Circle",
+                    "rank": "41 / 1\u00a0787",
+                    "cp": "4\u00a0133"
+                },
+                {
+                    "title": "Mad Pod Racing",
+                    "rank": "3\u00a0438 / 179\u00a0358",
+                    "cp": "4\u00a0249"
+                }
+            ]
+        },
+        "Clash of Code": {
+            "global": "9\u00a0746 / 554\u00a0519",
+            "local": "N/A",
+            "cp": "4 310",
+            "rows": [
+                {
+                    "title": "Clash of Code",
+                    "rank": "9\u00a0746 / 554\u00a0519",
+                    "cp": "4\u00a0310"
+                }
+            ]
+        },
+        "Optimisation": {
+            "global": "569 / 34\u00a0120",
+            "local": "241 / 10\u00a0596",
+            "cp": "4 752",
+            "rows": [
+                {
+                    "title": "Code vs Zombies",
+                    "rank": "203 / 17\u00a0569",
+                    "cp": "2\u00a0280"
+                },
+                {
+                    "title": "Block the spreading fire !",
+                    "rank": "125 / 493",
+                    "cp": "346"
+                },
+                {
+                    "title": "CodinGame Sponsored Challenge",
+                    "rank": "464 / 16\u00a0742",
+                    "cp": "2\u00a0013"
+                },
+                {
+                    "title": "A*Craft",
+                    "rank": "1\u00a0266 / 1\u00a0536",
+                    "cp": "21"
+                },
+                {
+                    "title": "Code of the Rings",
+                    "rank": "3\u00a0148 / 7\u00a0198",
+                    "cp": "87"
+                },
+                {
+                    "title": "Mars Lander",
+                    "rank": "5\u00a0090 / 6\u00a0466",
+                    "cp": "5"
+                }
+            ]
+        },
+        "Taille de code": {
+            "global": "25 / 50\u00a0113",
+            "local": "16 / 15\u00a0409",
+            "cp": "5 435",
+            "rows": [
+                {
+                    "title": "Power of Thor TypeScript TypeScript",
+                    "rank": "20 / 372",
+                    "cp": "154"
+                },
+                {
+                    "title": "Power of Thor Java Java",
+                    "rank": "14 / 5\u00a0308",
+                    "cp": "198"
+                },
+                {
+                    "title": "Power of Thor C++ C++",
+                    "rank": "31 / 5\u00a0369",
+                    "cp": "194"
+                },
+                {
+                    "title": "Power of Thor VB.NET VB.NET",
+                    "rank": "52 / 246",
+                    "cp": "68"
+                },
+                {
+                    "title": "Power of Thor Python3 Python3",
+                    "rank": "32 / 9\u00a0585",
+                    "cp": "197"
+                },
+                {
+                    "title": "Power of Thor Javascript Javascript",
+                    "rank": "22 / 5\u00a0141",
+                    "cp": "196"
+                },
+                {
+                    "title": "ASCII Art - Code Golf TypeScript TypeScript",
+                    "rank": "13 / 47",
+                    "cp": "52"
+                },
+                {
+                    "title": "ASCII Art - Code Golf VB.NET VB.NET",
+                    "rank": "4 / 7",
+                    "cp": "21"
+                },
+                {
+                    "title": "ASCII Art - Code Golf Python3 Python3",
+                    "rank": "55 / 492",
+                    "cp": "112"
+                },
+                {
+                    "title": "ASCII Art - Code Golf Javascript Javascript",
+                    "rank": "24 / 168",
+                    "cp": "97"
+                },
+                {
+                    "title": "La descente - Code Golf TypeScript TypeScript",
+                    "rank": "20 / 56",
+                    "cp": "34"
+                },
+                {
+                    "title": "La descente - Code Golf VB.NET VB.NET",
+                    "rank": "7 / 16",
+                    "cp": "28"
+                },
+                {
+                    "title": "La descente - Code Golf Python3 Python3",
+                    "rank": "1 / 497",
+                    "cp": "200"
+                },
+                {
+                    "title": "La descente - Code Golf Javascript Javascript",
+                    "rank": "43 / 209",
+                    "cp": "70"
+                },
+                {
+                    "title": "Don't Panic VB.NET VB.NET",
+                    "rank": "24 / 82",
+                    "cp": "47"
+                },
+                {
+                    "title": "Don't Panic Python3 Python3",
+                    "rank": "69 / 3\u00a0549",
+                    "cp": "181"
+                },
+                {
+                    "title": "Don't Panic Javascript Javascript",
+                    "rank": "878 / 1\u00a0722",
+                    "cp": "14"
+                },
+                {
+                    "title": "Unary - Code Golf Java Java",
+                    "rank": "122 / 599",
+                    "cp": "69"
+                },
+                {
+                    "title": "Unary - Code Golf Python3 Python3",
+                    "rank": "313 / 3\u00a0237",
+                    "cp": "121"
+                },
+                {
+                    "title": "Unary - Code Golf Javascript Javascript",
+                    "rank": "127 / 1\u00a0164",
+                    "cp": "114"
+                },
+                {
+                    "title": "Temp\u00e9ratures TypeScript TypeScript",
+                    "rank": "51 / 322",
+                    "cp": "90"
+                },
+                {
+                    "title": "Temp\u00e9ratures Java Java",
+                    "rank": "205 / 2\u00a0604",
+                    "cp": "132"
+                },
+                {
+                    "title": "Temp\u00e9ratures C++ C++",
+                    "rank": "480 / 2\u00a0528",
+                    "cp": "74"
+                },
+                {
+                    "title": "Temp\u00e9ratures VB.NET VB.NET",
+                    "rank": "26 / 118",
+                    "cp": "64"
+                },
+                {
+                    "title": "Temp\u00e9ratures Python3 Python3",
+                    "rank": "80 / 7\u00a0681",
+                    "cp": "190"
+                },
+                {
+                    "title": "Temp\u00e9ratures Javascript Javascript",
+                    "rank": "136 / 3\u00a0445",
+                    "cp": "163"
+                },
+                {
+                    "title": "Temp\u00e9ratures Ruby Ruby",
+                    "rank": "1\u00a0035 / 1\u00a0229",
+                    "cp": "3"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf TypeScript TypeScript",
+                    "rank": "2 / 49",
+                    "cp": "180"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf Python3 Python3",
+                    "rank": "7 / 514",
+                    "cp": "189"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf Javascript Javascript",
+                    "rank": "3 / 99",
+                    "cp": "180"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf TypeScript TypeScript",
+                    "rank": "9 / 49",
+                    "cp": "85"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf Python3 Python3",
+                    "rank": "24 / 443",
+                    "cp": "152"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf Javascript Javascript",
+                    "rank": "10 / 128",
+                    "cp": "138"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf TypeScript TypeScript",
+                    "rank": "4 / 33",
+                    "cp": "124"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf Python3 Python3",
+                    "rank": "13 / 524",
+                    "cp": "178"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf Javascript Javascript",
+                    "rank": "4 / 101",
+                    "cp": "172"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf TypeScript TypeScript",
+                    "rank": "3 / 23",
+                    "cp": "127"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Java Java",
+                    "rank": "4 / 132",
+                    "cp": "178"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Python3 Python3",
+                    "rank": "315 / 319",
+                    "cp": "2"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Javascript Javascript",
+                    "rank": "4 / 158",
+                    "cp": "181"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf TypeScript TypeScript",
+                    "rank": "4 / 46",
+                    "cp": "142"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf Python3 Python3",
+                    "rank": "7 / 527",
+                    "cp": "189"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf Javascript Javascript",
+                    "rank": "9 / 113",
+                    "cp": "138"
+                },
+                {
+                    "title": "Calcul Maya - Code Golf VB.NET VB.NET",
+                    "rank": "4 / 6",
+                    "cp": "15"
+                },
+                {
+                    "title": "Calcul Maya - Code Golf Python3 Python3",
+                    "rank": "493 / 494",
+                    "cp": "2"
+                },
+                {
+                    "title": "Surface - Code Golf Java Java",
+                    "rank": "7 / 118",
+                    "cp": "153"
+                },
+                {
+                    "title": "Le labyrinthe - Code Golf Java Java",
+                    "rank": "6 / 124",
+                    "cp": "162"
+                }
+            ]
+        }
+    },
+    "2023/04/28 21:55:13": {
+        "Global": {
+            "global": "354 / 691\u00a0483",
+            "local": "167 / 123\u00a0605",
+            "cp": "48 550",
+            "rows": [
+                {
+                    "title": "Challenges",
+                    "rank": "324 / 49\u00a0041",
+                    "cp": "15\u00a0003"
+                },
+                {
+                    "title": "Combats de bots",
+                    "rank": "772 / 213\u00a0989",
+                    "cp": "19\u00a0050"
+                },
+                {
+                    "title": "Clash of Code",
+                    "rank": "9\u00a0750 / 554\u00a0530",
+                    "cp": "4\u00a0310"
+                },
+                {
+                    "title": "Optimisation",
+                    "rank": "569 / 34\u00a0120",
+                    "cp": "4\u00a0752"
+                },
+                {
+                    "title": "Taille de code",
+                    "rank": "25 / 50\u00a0113",
+                    "cp": "5\u00a0435"
+                }
+            ]
+        },
+        "Challenges": {
+            "global": "324 / 49\u00a0041",
+            "local": "116 / 16\u00a0420",
+            "cp": "15 003",
+            "rows": [
+                {
+                    "title": "Fall Challenge 2022 12.12.2022",
+                    "rank": "323 / 4\u00a0577",
+                    "cp": "5\u00a0232"
+                },
+                {
+                    "title": "Green Circle 16.06.2022",
+                    "rank": "135 / 1\u00a0758",
+                    "cp": "4\u00a0497"
+                },
+                {
+                    "title": "Spring Challenge 2022 21.04.2022",
+                    "rank": "407 / 7\u00a0695",
+                    "cp": "5\u00a0274"
+                }
+            ]
+        },
+        "Combats de bots": {
+            "global": "772 / 213\u00a0989",
+            "local": "303 / 51\u00a0842",
+            "cp": "19 050",
+            "rows": [
+                {
+                    "title": "Ultimate Tic-Tac-Toe",
+                    "rank": "1\u00a0720 / 6\u00a0881",
+                    "cp": "595"
+                },
+                {
+                    "title": "Spider Attack",
+                    "rank": "298 / 8\u00a0583",
+                    "cp": "3\u00a0725"
+                },
+                {
+                    "title": "Keep Off The Grass",
+                    "rank": "434 / 4\u00a0659",
+                    "cp": "2\u00a0273"
+                },
+                {
+                    "title": "Tron Battle",
+                    "rank": "318 / 7\u00a0172",
+                    "cp": "3\u00a0452"
+                },
+                {
+                    "title": "Cultist Wars",
+                    "rank": "237 / 281",
+                    "cp": "4"
+                },
+                {
+                    "title": "Game of Drones",
+                    "rank": "1\u00a0003 / 4\u00a0045",
+                    "cp": "619"
+                },
+                {
+                    "title": "Green Circle",
+                    "rank": "41 / 1\u00a0787",
+                    "cp": "4\u00a0133"
+                },
+                {
+                    "title": "Mad Pod Racing",
+                    "rank": "3\u00a0438 / 179\u00a0359",
+                    "cp": "4\u00a0249"
+                }
+            ]
+        },
+        "Clash of Code": {
+            "global": "9\u00a0750 / 554\u00a0530",
+            "local": "N/A",
+            "cp": "4 310",
+            "rows": [
+                {
+                    "title": "Clash of Code",
+                    "rank": "9\u00a0750 / 554\u00a0530",
+                    "cp": "4\u00a0310"
+                }
+            ]
+        },
+        "Optimisation": {
+            "global": "569 / 34\u00a0120",
+            "local": "241 / 10\u00a0596",
+            "cp": "4 752",
+            "rows": [
+                {
+                    "title": "Code vs Zombies",
+                    "rank": "203 / 17\u00a0569",
+                    "cp": "2\u00a0280"
+                },
+                {
+                    "title": "Block the spreading fire !",
+                    "rank": "125 / 493",
+                    "cp": "346"
+                },
+                {
+                    "title": "CodinGame Sponsored Challenge",
+                    "rank": "464 / 16\u00a0744",
+                    "cp": "2\u00a0013"
+                },
+                {
+                    "title": "A*Craft",
+                    "rank": "1\u00a0266 / 1\u00a0536",
+                    "cp": "21"
+                },
+                {
+                    "title": "Code of the Rings",
+                    "rank": "3\u00a0148 / 7\u00a0198",
+                    "cp": "87"
+                },
+                {
+                    "title": "Mars Lander",
+                    "rank": "5\u00a0090 / 6\u00a0466",
+                    "cp": "5"
+                }
+            ]
+        },
+        "Taille de code": {
+            "global": "25 / 50\u00a0113",
+            "local": "16 / 15\u00a0409",
+            "cp": "5 435",
+            "rows": [
+                {
+                    "title": "Power of Thor TypeScript TypeScript",
+                    "rank": "20 / 372",
+                    "cp": "154"
+                },
+                {
+                    "title": "Power of Thor Java Java",
+                    "rank": "14 / 5\u00a0309",
+                    "cp": "198"
+                },
+                {
+                    "title": "Power of Thor C++ C++",
+                    "rank": "31 / 5\u00a0369",
+                    "cp": "194"
+                },
+                {
+                    "title": "Power of Thor VB.NET VB.NET",
+                    "rank": "52 / 246",
+                    "cp": "68"
+                },
+                {
+                    "title": "Power of Thor Python3 Python3",
+                    "rank": "32 / 9\u00a0587",
+                    "cp": "197"
+                },
+                {
+                    "title": "Power of Thor Javascript Javascript",
+                    "rank": "22 / 5\u00a0141",
+                    "cp": "196"
+                },
+                {
+                    "title": "ASCII Art - Code Golf TypeScript TypeScript",
+                    "rank": "13 / 47",
+                    "cp": "52"
+                },
+                {
+                    "title": "ASCII Art - Code Golf VB.NET VB.NET",
+                    "rank": "4 / 7",
+                    "cp": "21"
+                },
+                {
+                    "title": "ASCII Art - Code Golf Python3 Python3",
+                    "rank": "55 / 492",
+                    "cp": "112"
+                },
+                {
+                    "title": "ASCII Art - Code Golf Javascript Javascript",
+                    "rank": "24 / 168",
+                    "cp": "97"
+                },
+                {
+                    "title": "La descente - Code Golf TypeScript TypeScript",
+                    "rank": "20 / 56",
+                    "cp": "34"
+                },
+                {
+                    "title": "La descente - Code Golf VB.NET VB.NET",
+                    "rank": "7 / 16",
+                    "cp": "28"
+                },
+                {
+                    "title": "La descente - Code Golf Python3 Python3",
+                    "rank": "1 / 498",
+                    "cp": "200"
+                },
+                {
+                    "title": "La descente - Code Golf Javascript Javascript",
+                    "rank": "43 / 209",
+                    "cp": "70"
+                },
+                {
+                    "title": "Don't Panic VB.NET VB.NET",
+                    "rank": "24 / 82",
+                    "cp": "47"
+                },
+                {
+                    "title": "Don't Panic Python3 Python3",
+                    "rank": "69 / 3\u00a0549",
+                    "cp": "181"
+                },
+                {
+                    "title": "Don't Panic Javascript Javascript",
+                    "rank": "878 / 1\u00a0722",
+                    "cp": "14"
+                },
+                {
+                    "title": "Unary - Code Golf Java Java",
+                    "rank": "122 / 600",
+                    "cp": "69"
+                },
+                {
+                    "title": "Unary - Code Golf Python3 Python3",
+                    "rank": "313 / 3\u00a0237",
+                    "cp": "121"
+                },
+                {
+                    "title": "Unary - Code Golf Javascript Javascript",
+                    "rank": "127 / 1\u00a0164",
+                    "cp": "114"
+                },
+                {
+                    "title": "Temp\u00e9ratures TypeScript TypeScript",
+                    "rank": "51 / 322",
+                    "cp": "90"
+                },
+                {
+                    "title": "Temp\u00e9ratures Java Java",
+                    "rank": "205 / 2\u00a0604",
+                    "cp": "132"
+                },
+                {
+                    "title": "Temp\u00e9ratures C++ C++",
+                    "rank": "480 / 2\u00a0528",
+                    "cp": "74"
+                },
+                {
+                    "title": "Temp\u00e9ratures VB.NET VB.NET",
+                    "rank": "26 / 118",
+                    "cp": "64"
+                },
+                {
+                    "title": "Temp\u00e9ratures Python3 Python3",
+                    "rank": "80 / 7\u00a0681",
+                    "cp": "190"
+                },
+                {
+                    "title": "Temp\u00e9ratures Javascript Javascript",
+                    "rank": "136 / 3\u00a0445",
+                    "cp": "163"
+                },
+                {
+                    "title": "Temp\u00e9ratures Ruby Ruby",
+                    "rank": "1\u00a0035 / 1\u00a0229",
+                    "cp": "3"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf TypeScript TypeScript",
+                    "rank": "2 / 49",
+                    "cp": "180"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf Python3 Python3",
+                    "rank": "7 / 514",
+                    "cp": "189"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf Javascript Javascript",
+                    "rank": "3 / 99",
+                    "cp": "180"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf TypeScript TypeScript",
+                    "rank": "9 / 49",
+                    "cp": "85"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf Python3 Python3",
+                    "rank": "24 / 443",
+                    "cp": "152"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf Javascript Javascript",
+                    "rank": "10 / 128",
+                    "cp": "138"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf TypeScript TypeScript",
+                    "rank": "4 / 33",
+                    "cp": "124"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf Python3 Python3",
+                    "rank": "13 / 524",
+                    "cp": "178"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf Javascript Javascript",
+                    "rank": "4 / 101",
+                    "cp": "172"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf TypeScript TypeScript",
+                    "rank": "3 / 23",
+                    "cp": "127"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Java Java",
+                    "rank": "4 / 132",
+                    "cp": "178"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Python3 Python3",
+                    "rank": "315 / 319",
+                    "cp": "2"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Javascript Javascript",
+                    "rank": "4 / 158",
+                    "cp": "181"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf TypeScript TypeScript",
+                    "rank": "4 / 46",
+                    "cp": "142"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf Python3 Python3",
+                    "rank": "7 / 527",
+                    "cp": "189"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf Javascript Javascript",
+                    "rank": "9 / 113",
+                    "cp": "138"
+                },
+                {
+                    "title": "Calcul Maya - Code Golf VB.NET VB.NET",
+                    "rank": "4 / 6",
+                    "cp": "15"
+                },
+                {
+                    "title": "Calcul Maya - Code Golf Python3 Python3",
+                    "rank": "493 / 494",
+                    "cp": "2"
+                },
+                {
+                    "title": "Surface - Code Golf Java Java",
+                    "rank": "7 / 118",
+                    "cp": "153"
+                },
+                {
+                    "title": "Le labyrinthe - Code Golf Java Java",
+                    "rank": "6 / 124",
+                    "cp": "162"
+                }
+            ]
+        }
+    },
+    "2023/04/28 22:02:11": {
+        "Global": {
+            "global": "354 / 691\u00a0483",
+            "local": "167 / 123\u00a0605",
+            "cp": "48 550",
+            "rows": [
+                {
+                    "title": "Challenges",
+                    "rank": "324 / 49\u00a0041",
+                    "cp": "15\u00a0003"
+                },
+                {
+                    "title": "Combats de bots",
+                    "rank": "772 / 213\u00a0989",
+                    "cp": "19\u00a0050"
+                },
+                {
+                    "title": "Clash of Code",
+                    "rank": "9\u00a0750 / 554\u00a0530",
+                    "cp": "4\u00a0310"
+                },
+                {
+                    "title": "Optimisation",
+                    "rank": "569 / 34\u00a0120",
+                    "cp": "4\u00a0752"
+                },
+                {
+                    "title": "Taille de code",
+                    "rank": "25 / 50\u00a0113",
+                    "cp": "5\u00a0435"
+                }
+            ]
+        },
+        "Challenges": {
+            "global": "324 / 49\u00a0041",
+            "local": "116 / 16\u00a0420",
+            "cp": "15 003",
+            "rows": [
+                {
+                    "title": "Fall Challenge 2022 12.12.2022",
+                    "rank": "323 / 4\u00a0577",
+                    "cp": "5\u00a0232"
+                },
+                {
+                    "title": "Green Circle 16.06.2022",
+                    "rank": "135 / 1\u00a0758",
+                    "cp": "4\u00a0497"
+                },
+                {
+                    "title": "Spring Challenge 2022 21.04.2022",
+                    "rank": "407 / 7\u00a0695",
+                    "cp": "5\u00a0274"
+                }
+            ]
+        },
+        "Combats de bots": {
+            "global": "772 / 213\u00a0989",
+            "local": "303 / 51\u00a0842",
+            "cp": "19 050",
+            "rows": [
+                {
+                    "title": "Ultimate Tic-Tac-Toe",
+                    "rank": "1\u00a0720 / 6\u00a0881",
+                    "cp": "595"
+                },
+                {
+                    "title": "Spider Attack",
+                    "rank": "298 / 8\u00a0583",
+                    "cp": "3\u00a0725"
+                },
+                {
+                    "title": "Keep Off The Grass",
+                    "rank": "434 / 4\u00a0659",
+                    "cp": "2\u00a0273"
+                },
+                {
+                    "title": "Tron Battle",
+                    "rank": "318 / 7\u00a0172",
+                    "cp": "3\u00a0452"
+                },
+                {
+                    "title": "Cultist Wars",
+                    "rank": "237 / 281",
+                    "cp": "4"
+                },
+                {
+                    "title": "Game of Drones",
+                    "rank": "1\u00a0003 / 4\u00a0045",
+                    "cp": "619"
+                },
+                {
+                    "title": "Green Circle",
+                    "rank": "41 / 1\u00a0787",
+                    "cp": "4\u00a0133"
+                },
+                {
+                    "title": "Mad Pod Racing",
+                    "rank": "3\u00a0438 / 179\u00a0359",
+                    "cp": "4\u00a0249"
+                }
+            ]
+        },
+        "Clash of Code": {
+            "global": "9\u00a0750 / 554\u00a0530",
+            "local": "N/A",
+            "cp": "4 310",
+            "rows": [
+                {
+                    "title": "Clash of Code",
+                    "rank": "9\u00a0750 / 554\u00a0530",
+                    "cp": "4\u00a0310"
+                }
+            ]
+        },
+        "Optimisation": {
+            "global": "569 / 34\u00a0120",
+            "local": "241 / 10\u00a0596",
+            "cp": "4 752",
+            "rows": [
+                {
+                    "title": "Code vs Zombies",
+                    "rank": "203 / 17\u00a0569",
+                    "cp": "2\u00a0280"
+                },
+                {
+                    "title": "Block the spreading fire !",
+                    "rank": "125 / 493",
+                    "cp": "346"
+                },
+                {
+                    "title": "CodinGame Sponsored Challenge",
+                    "rank": "464 / 16\u00a0744",
+                    "cp": "2\u00a0013"
+                },
+                {
+                    "title": "A*Craft",
+                    "rank": "1\u00a0267 / 1\u00a0537",
+                    "cp": "21"
+                },
+                {
+                    "title": "Code of the Rings",
+                    "rank": "3\u00a0148 / 7\u00a0198",
+                    "cp": "87"
+                },
+                {
+                    "title": "Mars Lander",
+                    "rank": "5\u00a0090 / 6\u00a0466",
+                    "cp": "5"
+                }
+            ]
+        },
+        "Taille de code": {
+            "global": "25 / 50\u00a0113",
+            "local": "16 / 15\u00a0409",
+            "cp": "5 435",
+            "rows": [
+                {
+                    "title": "Power of Thor TypeScript TypeScript",
+                    "rank": "20 / 372",
+                    "cp": "154"
+                },
+                {
+                    "title": "Power of Thor Java Java",
+                    "rank": "14 / 5\u00a0309",
+                    "cp": "198"
+                },
+                {
+                    "title": "Power of Thor C++ C++",
+                    "rank": "31 / 5\u00a0369",
+                    "cp": "194"
+                },
+                {
+                    "title": "Power of Thor VB.NET VB.NET",
+                    "rank": "52 / 246",
+                    "cp": "68"
+                },
+                {
+                    "title": "Power of Thor Python3 Python3",
+                    "rank": "32 / 9\u00a0587",
+                    "cp": "197"
+                },
+                {
+                    "title": "Power of Thor Javascript Javascript",
+                    "rank": "22 / 5\u00a0141",
+                    "cp": "196"
+                },
+                {
+                    "title": "ASCII Art - Code Golf TypeScript TypeScript",
+                    "rank": "13 / 47",
+                    "cp": "52"
+                },
+                {
+                    "title": "ASCII Art - Code Golf VB.NET VB.NET",
+                    "rank": "4 / 7",
+                    "cp": "21"
+                },
+                {
+                    "title": "ASCII Art - Code Golf Python3 Python3",
+                    "rank": "55 / 492",
+                    "cp": "112"
+                },
+                {
+                    "title": "ASCII Art - Code Golf Javascript Javascript",
+                    "rank": "24 / 168",
+                    "cp": "97"
+                },
+                {
+                    "title": "La descente - Code Golf TypeScript TypeScript",
+                    "rank": "20 / 56",
+                    "cp": "34"
+                },
+                {
+                    "title": "La descente - Code Golf VB.NET VB.NET",
+                    "rank": "7 / 16",
+                    "cp": "28"
+                },
+                {
+                    "title": "La descente - Code Golf Python3 Python3",
+                    "rank": "1 / 498",
+                    "cp": "200"
+                },
+                {
+                    "title": "La descente - Code Golf Javascript Javascript",
+                    "rank": "43 / 209",
+                    "cp": "70"
+                },
+                {
+                    "title": "Don't Panic VB.NET VB.NET",
+                    "rank": "24 / 82",
+                    "cp": "47"
+                },
+                {
+                    "title": "Don't Panic Python3 Python3",
+                    "rank": "69 / 3\u00a0549",
+                    "cp": "181"
+                },
+                {
+                    "title": "Don't Panic Javascript Javascript",
+                    "rank": "878 / 1\u00a0722",
+                    "cp": "14"
+                },
+                {
+                    "title": "Unary - Code Golf Java Java",
+                    "rank": "122 / 600",
+                    "cp": "69"
+                },
+                {
+                    "title": "Unary - Code Golf Python3 Python3",
+                    "rank": "313 / 3\u00a0237",
+                    "cp": "121"
+                },
+                {
+                    "title": "Unary - Code Golf Javascript Javascript",
+                    "rank": "127 / 1\u00a0164",
+                    "cp": "114"
+                },
+                {
+                    "title": "Temp\u00e9ratures TypeScript TypeScript",
+                    "rank": "51 / 322",
+                    "cp": "90"
+                },
+                {
+                    "title": "Temp\u00e9ratures Java Java",
+                    "rank": "205 / 2\u00a0604",
+                    "cp": "132"
+                },
+                {
+                    "title": "Temp\u00e9ratures C++ C++",
+                    "rank": "480 / 2\u00a0528",
+                    "cp": "74"
+                },
+                {
+                    "title": "Temp\u00e9ratures VB.NET VB.NET",
+                    "rank": "26 / 118",
+                    "cp": "64"
+                },
+                {
+                    "title": "Temp\u00e9ratures Python3 Python3",
+                    "rank": "80 / 7\u00a0681",
+                    "cp": "190"
+                },
+                {
+                    "title": "Temp\u00e9ratures Javascript Javascript",
+                    "rank": "136 / 3\u00a0445",
+                    "cp": "163"
+                },
+                {
+                    "title": "Temp\u00e9ratures Ruby Ruby",
+                    "rank": "1\u00a0035 / 1\u00a0229",
+                    "cp": "3"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf TypeScript TypeScript",
+                    "rank": "2 / 49",
+                    "cp": "180"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf Python3 Python3",
+                    "rank": "7 / 514",
+                    "cp": "189"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf Javascript Javascript",
+                    "rank": "3 / 99",
+                    "cp": "180"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf TypeScript TypeScript",
+                    "rank": "9 / 49",
+                    "cp": "85"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf Python3 Python3",
+                    "rank": "24 / 443",
+                    "cp": "152"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf Javascript Javascript",
+                    "rank": "10 / 128",
+                    "cp": "138"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf TypeScript TypeScript",
+                    "rank": "4 / 33",
+                    "cp": "124"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf Python3 Python3",
+                    "rank": "13 / 524",
+                    "cp": "178"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf Javascript Javascript",
+                    "rank": "4 / 101",
+                    "cp": "172"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf TypeScript TypeScript",
+                    "rank": "3 / 23",
+                    "cp": "127"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Java Java",
+                    "rank": "4 / 132",
+                    "cp": "178"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Python3 Python3",
+                    "rank": "315 / 319",
+                    "cp": "2"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Javascript Javascript",
+                    "rank": "4 / 158",
+                    "cp": "181"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf TypeScript TypeScript",
+                    "rank": "4 / 46",
+                    "cp": "142"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf Python3 Python3",
+                    "rank": "7 / 527",
+                    "cp": "189"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf Javascript Javascript",
+                    "rank": "9 / 113",
+                    "cp": "138"
+                },
+                {
+                    "title": "Calcul Maya - Code Golf VB.NET VB.NET",
+                    "rank": "4 / 6",
+                    "cp": "15"
+                },
+                {
+                    "title": "Calcul Maya - Code Golf Python3 Python3",
+                    "rank": "493 / 494",
+                    "cp": "2"
+                },
+                {
+                    "title": "Surface - Code Golf Java Java",
+                    "rank": "7 / 118",
+                    "cp": "153"
+                },
+                {
+                    "title": "Le labyrinthe - Code Golf Java Java",
+                    "rank": "6 / 124",
+                    "cp": "162"
+                }
+            ]
+        }
+    },
+    "2023/04/30 13:48:17": {
+        "Global": {
+            "global": "355 / 692\u00a0109",
+            "local": "167 / 123\u00a0692",
+            "cp": "48 520",
+            "rows": [
+                {
+                    "title": "Challenges",
+                    "rank": "324 / 49\u00a0041",
+                    "cp": "15\u00a0003"
+                },
+                {
+                    "title": "Combats de bots",
+                    "rank": "772 / 214\u00a0124",
+                    "cp": "19\u00a0048"
+                },
+                {
+                    "title": "Clash of Code",
+                    "rank": "9\u00a0865 / 554\u00a0942",
+                    "cp": "4\u00a0299"
+                },
+                {
+                    "title": "Optimisation",
+                    "rank": "568 / 34\u00a0144",
+                    "cp": "4\u00a0754"
+                },
+                {
+                    "title": "Taille de code",
+                    "rank": "25 / 50\u00a0157",
+                    "cp": "5\u00a0416"
+                }
+            ]
+        },
+        "Challenges": {
+            "global": "324 / 49\u00a0041",
+            "local": "116 / 16\u00a0419",
+            "cp": "15 003",
+            "rows": [
+                {
+                    "title": "Fall Challenge 2022 12.12.2022",
+                    "rank": "323 / 4\u00a0577",
+                    "cp": "5\u00a0232"
+                },
+                {
+                    "title": "Green Circle 16.06.2022",
+                    "rank": "135 / 1\u00a0758",
+                    "cp": "4\u00a0497"
+                },
+                {
+                    "title": "Spring Challenge 2022 21.04.2022",
+                    "rank": "407 / 7\u00a0695",
+                    "cp": "5\u00a0274"
+                }
+            ]
+        },
+        "Combats de bots": {
+            "global": "772 / 214\u00a0124",
+            "local": "303 / 51\u00a0878",
+            "cp": "19 048",
+            "rows": [
+                {
+                    "title": "Ultimate Tic-Tac-Toe",
+                    "rank": "1\u00a0720 / 6\u00a0886",
+                    "cp": "596"
+                },
+                {
+                    "title": "Spider Attack",
+                    "rank": "299 / 8\u00a0585",
+                    "cp": "3\u00a0722"
+                },
+                {
+                    "title": "Keep Off The Grass",
+                    "rank": "434 / 4\u00a0659",
+                    "cp": "2\u00a0273"
+                },
+                {
+                    "title": "Tron Battle",
+                    "rank": "318 / 7\u00a0174",
+                    "cp": "3\u00a0452"
+                },
+                {
+                    "title": "Cultist Wars",
+                    "rank": "237 / 281",
+                    "cp": "4"
+                },
+                {
+                    "title": "Game of Drones",
+                    "rank": "1\u00a0003 / 4\u00a0045",
+                    "cp": "619"
+                },
+                {
+                    "title": "Green Circle",
+                    "rank": "41 / 1\u00a0787",
+                    "cp": "4\u00a0133"
+                },
+                {
+                    "title": "Mad Pod Racing",
+                    "rank": "3\u00a0438 / 179\u00a0433",
+                    "cp": "4\u00a0249"
+                }
+            ]
+        },
+        "Clash of Code": {
+            "global": "9\u00a0865 / 554\u00a0942",
+            "local": "N/A",
+            "cp": "4 299",
+            "rows": [
+                {
+                    "title": "Clash of Code",
+                    "rank": "9\u00a0865 / 554\u00a0942",
+                    "cp": "4\u00a0299"
+                }
+            ]
+        },
+        "Optimisation": {
+            "global": "568 / 34\u00a0144",
+            "local": "241 / 10\u00a0605",
+            "cp": "4 754",
+            "rows": [
+                {
+                    "title": "Code vs Zombies",
+                    "rank": "203 / 17\u00a0578",
+                    "cp": "2\u00a0280"
+                },
+                {
+                    "title": "Block the spreading fire !",
+                    "rank": "125 / 495",
+                    "cp": "348"
+                },
+                {
+                    "title": "CodinGame Sponsored Challenge",
+                    "rank": "464 / 16\u00a0750",
+                    "cp": "2\u00a0013"
+                },
+                {
+                    "title": "A*Craft",
+                    "rank": "1\u00a0268 / 1\u00a0538",
+                    "cp": "21"
+                },
+                {
+                    "title": "Code of the Rings",
+                    "rank": "3\u00a0149 / 7\u00a0199",
+                    "cp": "87"
+                },
+                {
+                    "title": "Mars Lander",
+                    "rank": "5\u00a0094 / 6\u00a0471",
+                    "cp": "5"
+                }
+            ]
+        },
+        "Taille de code": {
+            "global": "25 / 50\u00a0157",
+            "local": "16 / 15\u00a0426",
+            "cp": "5 416",
+            "rows": [
+                {
+                    "title": "Power of Thor TypeScript TypeScript",
+                    "rank": "20 / 372",
+                    "cp": "154"
+                },
+                {
+                    "title": "Power of Thor Java Java",
+                    "rank": "14 / 5\u00a0311",
+                    "cp": "198"
+                },
+                {
+                    "title": "Power of Thor C++ C++",
+                    "rank": "31 / 5\u00a0372",
+                    "cp": "194"
+                },
+                {
+                    "title": "Power of Thor VB.NET VB.NET",
+                    "rank": "54 / 246",
+                    "cp": "68"
+                },
+                {
+                    "title": "Power of Thor Python3 Python3",
+                    "rank": "32 / 9\u00a0594",
+                    "cp": "197"
+                },
+                {
+                    "title": "Power of Thor Javascript Javascript",
+                    "rank": "22 / 5\u00a0142",
+                    "cp": "196"
+                },
+                {
+                    "title": "ASCII Art - Code Golf TypeScript TypeScript",
+                    "rank": "13 / 47",
+                    "cp": "52"
+                },
+                {
+                    "title": "ASCII Art - Code Golf VB.NET VB.NET",
+                    "rank": "4 / 7",
+                    "cp": "21"
+                },
+                {
+                    "title": "ASCII Art - Code Golf Python3 Python3",
+                    "rank": "55 / 493",
+                    "cp": "112"
+                },
+                {
+                    "title": "ASCII Art - Code Golf Javascript Javascript",
+                    "rank": "24 / 168",
+                    "cp": "97"
+                },
+                {
+                    "title": "La descente - Code Golf TypeScript TypeScript",
+                    "rank": "20 / 56",
+                    "cp": "34"
+                },
+                {
+                    "title": "La descente - Code Golf VB.NET VB.NET",
+                    "rank": "7 / 16",
+                    "cp": "28"
+                },
+                {
+                    "title": "La descente - Code Golf Python3 Python3",
+                    "rank": "1 / 503",
+                    "cp": "200"
+                },
+                {
+                    "title": "La descente - Code Golf Javascript Javascript",
+                    "rank": "43 / 210",
+                    "cp": "70"
+                },
+                {
+                    "title": "Don't Panic VB.NET VB.NET",
+                    "rank": "24 / 82",
+                    "cp": "47"
+                },
+                {
+                    "title": "Don't Panic Python3 Python3",
+                    "rank": "69 / 3\u00a0551",
+                    "cp": "181"
+                },
+                {
+                    "title": "Don't Panic Javascript Javascript",
+                    "rank": "878 / 1\u00a0722",
+                    "cp": "14"
+                },
+                {
+                    "title": "Unary - Code Golf Java Java",
+                    "rank": "122 / 600",
+                    "cp": "70"
+                },
+                {
+                    "title": "Unary - Code Golf Python3 Python3",
+                    "rank": "313 / 3\u00a0241",
+                    "cp": "121"
+                },
+                {
+                    "title": "Unary - Code Golf Javascript Javascript",
+                    "rank": "127 / 1\u00a0164",
+                    "cp": "114"
+                },
+                {
+                    "title": "Temp\u00e9ratures TypeScript TypeScript",
+                    "rank": "51 / 322",
+                    "cp": "90"
+                },
+                {
+                    "title": "Temp\u00e9ratures Java Java",
+                    "rank": "205 / 2\u00a0604",
+                    "cp": "132"
+                },
+                {
+                    "title": "Temp\u00e9ratures C++ C++",
+                    "rank": "481 / 2\u00a0529",
+                    "cp": "74"
+                },
+                {
+                    "title": "Temp\u00e9ratures VB.NET VB.NET",
+                    "rank": "26 / 118",
+                    "cp": "65"
+                },
+                {
+                    "title": "Temp\u00e9ratures Python3 Python3",
+                    "rank": "80 / 7\u00a0682",
+                    "cp": "190"
+                },
+                {
+                    "title": "Temp\u00e9ratures Javascript Javascript",
+                    "rank": "136 / 3\u00a0447",
+                    "cp": "163"
+                },
+                {
+                    "title": "Temp\u00e9ratures Ruby Ruby",
+                    "rank": "1\u00a0035 / 1\u00a0229",
+                    "cp": "3"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf TypeScript TypeScript",
+                    "rank": "2 / 49",
+                    "cp": "180"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf Python3 Python3",
+                    "rank": "7 / 515",
+                    "cp": "189"
+                },
+                {
+                    "title": "Des nains sur des \u00e9paules de g\u00e9ants - Code Golf Javascript Javascript",
+                    "rank": "3 / 100",
+                    "cp": "180"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf TypeScript TypeScript",
+                    "rank": "9 / 49",
+                    "cp": "85"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf Python3 Python3",
+                    "rank": "24 / 444",
+                    "cp": "152"
+                },
+                {
+                    "title": "Shadows of the Knight - Episode 1 - Code Golf Javascript Javascript",
+                    "rank": "10 / 128",
+                    "cp": "138"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf TypeScript TypeScript",
+                    "rank": "4 / 33",
+                    "cp": "124"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf Python3 Python3",
+                    "rank": "13 / 527",
+                    "cp": "178"
+                },
+                {
+                    "title": "C\u00e2blage r\u00e9seau - Code Golf Javascript Javascript",
+                    "rank": "4 / 101",
+                    "cp": "172"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf TypeScript TypeScript",
+                    "rank": "3 / 23",
+                    "cp": "127"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Java Java",
+                    "rank": "4 / 133",
+                    "cp": "178"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Python3 Python3",
+                    "rank": "315 / 319",
+                    "cp": "2"
+                },
+                {
+                    "title": "La r\u00e9sistance - Code Golf Javascript Javascript",
+                    "rank": "4 / 158",
+                    "cp": "181"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf TypeScript TypeScript",
+                    "rank": "5 / 46",
+                    "cp": "127"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf Python3 Python3",
+                    "rank": "7 / 527",
+                    "cp": "189"
+                },
+                {
+                    "title": "Num\u00e9ros de t\u00e9l\u00e9phone - Code Golf Javascript Javascript",
+                    "rank": "10 / 114",
+                    "cp": "133"
+                },
+                {
+                    "title": "Calcul Maya - Code Golf VB.NET VB.NET",
+                    "rank": "4 / 6",
+                    "cp": "15"
+                },
+                {
+                    "title": "Calcul Maya - Code Golf Python3 Python3",
+                    "rank": "493 / 494",
+                    "cp": "2"
+                },
+                {
+                    "title": "Surface - Code Golf Java Java",
+                    "rank": "7 / 118",
+                    "cp": "153"
+                },
+                {
+                    "title": "Le labyrinthe - Code Golf Java Java",
+                    "rank": "6 / 124",
+                    "cp": "162"
+                }
+            ]
+        }
+    }
+}
