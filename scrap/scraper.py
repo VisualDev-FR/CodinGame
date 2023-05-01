@@ -10,6 +10,7 @@ def scrap():
     
     options = webdriver.ChromeOptions()
     options.add_argument("--window-size=1920,1080")
+    options.add_argument("--headless")
     
     driver = webdriver.Chrome(options=options)
 
@@ -73,11 +74,14 @@ def scrap():
     return data
 
 
-data = scrap()
 
-scraped = json.loads(open("data.json", "r").read())
-scraped[datetime.now().strftime("%Y/%m/%d %H:%M:%S")] = data
+try:
+    data = scrap()
+    filename = datetime.now().strftime("./data/%Y-%m-%d_%H-%M-%S_data.json")
 
-with open("data.json", "w") as file:
-    file.write(json.dumps(scraped, indent=4))
-    file.close()
+    with open(filename, "w") as file:
+        file.write(json.dumps(data))
+        file.close()    
+except:
+    input("\nError occured...")
+    
